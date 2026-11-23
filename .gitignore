@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+
+# Build del frontend copiado al backend
+backend/static/
+
+# Configuración local (puede tener datos sensibles)
+.env
+
+# Editores y sistema
+.vscode/
+.DS_Store

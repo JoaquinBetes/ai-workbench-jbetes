@@ -1,0 +1,12 @@
+services:
+  workbench:
+    build: .
+    container_name: ai-workbench
+    ports:
+      - "8501:8000"          # http://<servidor>:8501
+    environment:
+      # Ollama corre directo en el servidor (fuera de Docker)
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
