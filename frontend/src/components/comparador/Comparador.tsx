@@ -1,10 +1,11 @@
 import { useState } from "react";
 import LadoALado from "./LadoALado";
+import Variabilidad from "./Variabilidad";
 
 // Los tres modos del comparador (capítulo 2). Se van habilitando de a uno.
 const MODOS = [
   { id: "lado-a-lado", nombre: "Modelos lado a lado", listo: true },
-  { id: "variabilidad", nombre: "Variabilidad", listo: false },
+  { id: "variabilidad", nombre: "Variabilidad", listo: true },
   { id: "estructuradas", nombre: "Salidas estructuradas", listo: false },
 ] as const;
 
@@ -34,7 +35,10 @@ export default function Comparador() {
           </button>
         ))}
       </div>
-      <div className="min-h-0 flex-1">{modo === "lado-a-lado" && <LadoALado />}</div>
+      <div className="min-h-0 flex-1">
+        {modo === "lado-a-lado" && <LadoALado />}
+        {modo === "variabilidad" && <Variabilidad />}
+      </div>
     </div>
   );
 }
