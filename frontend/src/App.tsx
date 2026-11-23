@@ -1,11 +1,13 @@
 import { useState } from "react";
 import Chat from "./components/Chat";
+import Comparador from "./components/comparador/Comparador";
 import HealthBadge from "./components/HealthBadge";
 import Playground from "./components/playground/Playground";
 
 // Cada módulo del Workbench es una pestaña. Se van sumando capítulo a capítulo.
 const MODULOS = [
   { id: "playground", nombre: "Playground", capitulo: "Cap. 2", componente: Playground },
+  { id: "comparador", nombre: "Comparador", capitulo: "Cap. 2", componente: Comparador },
   { id: "chat", nombre: "Chat", capitulo: null, componente: Chat },
 ] as const;
 

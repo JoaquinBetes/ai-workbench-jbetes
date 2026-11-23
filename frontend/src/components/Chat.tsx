@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { getModels, type ModelInfo, type TokenLogprob } from "../lib/api";
+import { type TokenLogprob } from "../lib/api";
 import { colorProbabilidad, pct, prob } from "../lib/probs";
+import { useModelos } from "../lib/useModelos";
 import { useStreamingChat } from "../lib/useStreamingChat";
 
 // Chat simple: tokens coloreados por probabilidad y alternativas al pasar el mouse.
@@ -26,23 +27,16 @@ function TextoConTokens({ tokens }: { tokens: TokenLogprob[] }) {
 }
 
 export default function Chat() {
-  const [modelos, setModelos] = useState<ModelInfo[]>([]);
+  const { modelos, preferido, error: errorModelos } = useModelos();
   const [modelo, setModelo] = useState("");
   const [entrada, setEntrada] = useState("");
   const [colorear, setColorear] = useState(true);
-  const [errorModelos, setErrorModelos] = useState<string | null>(null);
   const { turnos, generando, error, enviar, detener, reiniciar } = useStreamingChat();
   const fin = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    getModels()
-      .then((ms) => {
-        setModelos(ms);
-        const preferido = ms.find((m) => m.name === "qwen3:8b") ?? ms[0];
-        if (preferido) setModelo(preferido.name);
-      })
-      .catch((e) => setErrorModelos(`No pude leer los modelos: ${e.message}`));
-  }, []);
+    if (!modelo && preferido) setModelo(preferido);
+  }, [preferido, modelo]);
 
   // Llaves a propósito: un efecto solo puede devolver una función de limpieza,
   // y en Chrome nuevo scrollIntoView devuelve una Promise.

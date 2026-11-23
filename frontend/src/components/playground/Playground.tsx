@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { getModels, streamContinue, type ChatMessage, type ModelInfo } from "../../lib/api";
+import { streamContinue, type ChatMessage } from "../../lib/api";
 import { ID_RAIZ, nuevoId, textoDe, type Rama } from "../../lib/ramas";
 import { mostrarToken } from "../../lib/probs";
+import { useModelos } from "../../lib/useModelos";
 import { useStreamingChat, type Parametros } from "../../lib/useStreamingChat";
 import ArbolRamas from "./ArbolRamas";
 import Controles, { CONFIG_INICIAL, type Config } from "./Controles";
@@ -31,7 +32,7 @@ const parametrosDe = (c: Config): Parametros => ({
 });
 
 export default function Playground() {
-  const [modelos, setModelos] = useState<ModelInfo[]>([]);
+  const { modelos, preferido } = useModelos();
   const [config, setConfig] = useState<Config>(CONFIG_INICIAL);
   const [modo, setModo] = useState<ModoColor>("probabilidad");
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
@@ -47,12 +48,8 @@ export default function Playground() {
   const fin = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    getModels().then((ms) => {
-      setModelos(ms);
-      const preferido = ms.find((m) => m.name === "qwen3:8b") ?? ms[0];
-      if (preferido) setConfig((c) => ({ ...c, modelo: preferido.name }));
-    });
-  }, []);
+    if (preferido) setConfig((c) => (c.modelo ? c : { ...c, modelo: preferido }));
+  }, [preferido]);
 
   useEffect(() => {
     fin.current?.scrollIntoView({ behavior: "smooth" });
