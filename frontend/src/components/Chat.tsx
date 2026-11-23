@@ -1,33 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  getModels,
-  streamChat,
-  type ChatMessage,
-  type ModelInfo,
-  type Stats,
-  type TokenLogprob,
-} from "../lib/api";
+import { getModels, type ModelInfo, type TokenLogprob } from "../lib/api";
+import { colorProbabilidad, pct, prob } from "../lib/probs";
+import { useStreamingChat } from "../lib/useStreamingChat";
 
-type Turno = ChatMessage & { tokens?: TokenLogprob[]; stats?: Stats };
-
-// Color de fondo según la probabilidad del token: rojo (dudoso) → verde (seguro).
-function colorPorProbabilidad(p: number) {
-  return `hsla(${Math.round(p * 120)}, 75%, 45%, 0.35)`;
-}
-
+// Chat simple: tokens coloreados por probabilidad y alternativas al pasar el mouse.
 function TextoConTokens({ tokens }: { tokens: TokenLogprob[] }) {
   return (
     <>
       {tokens.map((t, i) => {
-        const p = Math.exp(t.logprob);
-        const alternativas = t.top
-          .map((a) => `${JSON.stringify(a.token)}  ${(Math.exp(a.logprob) * 100).toFixed(1)}%`)
-          .join("\n");
+        const p = prob(t.logprob);
+        const alternativas = t.top.map((a) => `${JSON.stringify(a.token)}  ${pct(prob(a.logprob))}`).join("\n");
         return (
           <span
             key={i}
-            title={`Elegido: ${JSON.stringify(t.token)} (${(p * 100).toFixed(1)}%)\n\nAlternativas:\n${alternativas}`}
-            style={{ backgroundColor: colorPorProbabilidad(p) }}
+            title={`Elegido: ${JSON.stringify(t.token)} (${pct(p)})\n\nAlternativas:\n${alternativas}`}
+            style={{ backgroundColor: colorProbabilidad(p) }}
             className="cursor-help rounded-sm"
           >
             {t.token}
@@ -41,12 +28,10 @@ function TextoConTokens({ tokens }: { tokens: TokenLogprob[] }) {
 export default function Chat() {
   const [modelos, setModelos] = useState<ModelInfo[]>([]);
   const [modelo, setModelo] = useState("");
-  const [turnos, setTurnos] = useState<Turno[]>([]);
   const [entrada, setEntrada] = useState("");
-  const [generando, setGenerando] = useState(false);
   const [colorear, setColorear] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const cancelar = useRef<AbortController | null>(null);
+  const [errorModelos, setErrorModelos] = useState<string | null>(null);
+  const { turnos, generando, error, enviar, detener, reiniciar } = useStreamingChat();
   const fin = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,7 +41,7 @@ export default function Chat() {
         const preferido = ms.find((m) => m.name === "qwen3:8b") ?? ms[0];
         if (preferido) setModelo(preferido.name);
       })
-      .catch((e) => setError(`No pude leer los modelos: ${e.message}`));
+      .catch((e) => setErrorModelos(`No pude leer los modelos: ${e.message}`));
   }, []);
 
   // Llaves a propósito: un efecto solo puede devolver una función de limpieza,
@@ -65,41 +50,9 @@ export default function Chat() {
     fin.current?.scrollIntoView({ behavior: "smooth" });
   }, [turnos]);
 
-  async function enviar() {
-    const texto = entrada.trim();
-    if (!texto || !modelo || generando) return;
-
-    const historial: Turno[] = [...turnos, { role: "user", content: texto }];
-    setTurnos([...historial, { role: "assistant", content: "", tokens: [] }]);
+  function mandar() {
+    enviar(entrada, modelo);
     setEntrada("");
-    setError(null);
-    setGenerando(true);
-    cancelar.current = new AbortController();
-
-    // Actualiza la última respuesta (la que se está generando).
-    const actualizar = (f: (t: Turno) => Turno) =>
-      setTurnos((prev) => [...prev.slice(0, -1), f(prev[prev.length - 1])]);
-
-    try {
-      const mensajes = historial.map(({ role, content }) => ({ role, content }));
-      for await (const ev of streamChat({ model: modelo, messages: mensajes }, cancelar.current.signal)) {
-        if (ev.type === "token") {
-          actualizar((t) => ({
-            ...t,
-            content: t.content + ev.content,
-            tokens: [...(t.tokens ?? []), ...ev.logprobs],
-          }));
-        } else if (ev.type === "done") {
-          actualizar((t) => ({ ...t, stats: ev.stats }));
-        } else if (ev.type === "error") {
-          setError(ev.message);
-        }
-      }
-    } catch (e) {
-      if ((e as Error).name !== "AbortError") setError((e as Error).message);
-    } finally {
-      setGenerando(false);
-    }
   }
 
   return (
@@ -124,7 +77,7 @@ export default function Chat() {
           Colorear tokens por probabilidad
         </label>
         <button
-          onClick={() => setTurnos([])}
+          onClick={reiniciar}
           className="ml-auto rounded-md border border-zinc-700 px-3 py-1 text-zinc-300 hover:bg-zinc-800"
         >
           Nueva conversación
@@ -161,7 +114,7 @@ export default function Chat() {
         <div ref={fin} />
       </div>
 
-      {error && <p className="text-sm text-rose-400">{error}</p>}
+      {(error || errorModelos) && <p className="text-sm text-rose-400">{error ?? errorModelos}</p>}
 
       <div className="flex gap-2">
         <textarea
@@ -170,7 +123,7 @@ export default function Chat() {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
-              enviar();
+              mandar();
             }
           }}
           rows={2}
@@ -178,14 +131,11 @@ export default function Chat() {
           className="flex-1 resize-none rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 outline-none focus:border-indigo-500"
         />
         {generando ? (
-          <button
-            onClick={() => cancelar.current?.abort()}
-            className="rounded-xl bg-rose-600 px-5 font-medium hover:bg-rose-500"
-          >
+          <button onClick={detener} className="rounded-xl bg-rose-600 px-5 font-medium hover:bg-rose-500">
             Detener
           </button>
         ) : (
-          <button onClick={enviar} className="rounded-xl bg-indigo-600 px-5 font-medium hover:bg-indigo-500">
+          <button onClick={mandar} className="rounded-xl bg-indigo-600 px-5 font-medium hover:bg-indigo-500">
             Enviar
           </button>
         )}
