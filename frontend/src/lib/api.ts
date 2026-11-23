@@ -107,3 +107,53 @@ export const streamChat = (body: ChatRequest, signal?: AbortSignal) => streamSSE
 /** Sigue escribiendo una respuesta a partir de un prefijo (ramas). */
 export const streamContinue = (body: ContinueRequest, signal?: AbortSignal) =>
   streamSSE("/api/chat/continue", body, signal);
+
+// --- Salidas estructuradas (capítulo 2) ---------------------------------------
+
+export type MetodoEstructurado = "prompt" | "postproceso" | "restringido";
+
+export type EvaluacionEstructurada = {
+  parsed: unknown;
+  json_ok: boolean;
+  schema_ok: boolean;
+  schema_errors: string[];
+  repairs: string[];
+  accuracy: number | null;
+};
+
+export type ResultadoEstructurado = {
+  raw: string;
+  latency_s: number;
+  output_tokens: number | null;
+  tokens_per_second: number | null;
+  evaluaciones: Partial<Record<MetodoEstructurado, EvaluacionEstructurada>>;
+};
+
+export type PedidoEstructurado = {
+  model: string;
+  schema: object;
+  text: string;
+  /** "libre" evalúa a la vez "prompt" y "postproceso" sobre la misma respuesta. */
+  mode: "libre" | "restringido";
+  temperature?: number;
+  seed?: number | null;
+  max_tokens?: number;
+  expected?: unknown;
+};
+
+export async function muestraEstructurada(
+  body: PedidoEstructurado,
+  signal?: AbortSignal,
+): Promise<ResultadoEstructurado> {
+  const res = await fetch("/api/structured/sample", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!res.ok) {
+    const detalle = await res.json().catch(() => null);
+    throw new Error(typeof detalle?.detail === "string" ? detalle.detail : `HTTP ${res.status}`);
+  }
+  return res.json();
+}

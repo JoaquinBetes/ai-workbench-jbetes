@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Estructuradas from "./Estructuradas";
 import LadoALado from "./LadoALado";
 import Variabilidad from "./Variabilidad";
 
@@ -6,7 +7,7 @@ import Variabilidad from "./Variabilidad";
 const MODOS = [
   { id: "lado-a-lado", nombre: "Modelos lado a lado", listo: true },
   { id: "variabilidad", nombre: "Variabilidad", listo: true },
-  { id: "estructuradas", nombre: "Salidas estructuradas", listo: false },
+  { id: "estructuradas", nombre: "Salidas estructuradas", listo: true },
 ] as const;
 
 type IdModo = (typeof MODOS)[number]["id"];
@@ -38,6 +39,7 @@ export default function Comparador() {
       <div className="min-h-0 flex-1">
         {modo === "lado-a-lado" && <LadoALado />}
         {modo === "variabilidad" && <Variabilidad />}
+        {modo === "estructuradas" && <Estructuradas />}
       </div>
     </div>
   );
