@@ -3,6 +3,7 @@ import { getModels, streamContinue, type ChatMessage, type ModelInfo } from "../
 import { ID_RAIZ, nuevoId, textoDe, type Rama } from "../../lib/ramas";
 import { mostrarToken } from "../../lib/probs";
 import { useStreamingChat, type Parametros } from "../../lib/useStreamingChat";
+import ArbolRamas from "./ArbolRamas";
 import Controles, { CONFIG_INICIAL, type Config } from "./Controles";
 import InspectorToken, { type EstadoToken } from "./InspectorToken";
 import MetricasRespuesta from "./MetricasRespuesta";
@@ -35,6 +36,8 @@ export default function Playground() {
   const [modo, setModo] = useState<ModoColor>("probabilidad");
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
   const [entrada, setEntrada] = useState("");
+  const [panel, setPanel] = useState<"inspector" | "ramas">("inspector");
+  const [turnoVista, setTurnoVista] = useState<number | null>(null);
   const { turnos, generando, error, enviar, detener, reiniciar } = useStreamingChat();
 
   // Ramas creadas por el usuario, por turno del asistente (la original se arma desde `turnos`).
@@ -93,6 +96,7 @@ export default function Playground() {
 
     setRamasExtra((prev) => ({ ...prev, [turno]: [...(prev[turno] ?? []), nueva] }));
     setRamaActiva((prev) => ({ ...prev, [turno]: nueva.id }));
+    setTurnoVista(turno);
     setSeleccion({ turno, rama: nueva.id, indice });
 
     const historial: ChatMessage[] = [
@@ -144,6 +148,7 @@ export default function Playground() {
     setRamasExtra({});
     setRamaActiva({});
     setContextos({});
+    setTurnoVista(null);
   }
 
   // --- Inspector -------------------------------------------------------------
@@ -154,6 +159,11 @@ export default function Playground() {
     const c = ramaSeleccionada.corte;
     estadoToken = seleccion.indice < c ? "heredado" : seleccion.indice === c ? "forzado" : "generado";
   }
+
+  // Turno cuyo árbol se muestra: el seleccionado o, si no hay, la última respuesta.
+  const ultimoAsistente = turnos.map((t, i) => (t.role === "assistant" ? i : -1)).filter((i) => i >= 0).pop();
+  const turnoArbol = seleccion?.turno ?? turnoVista ?? ultimoAsistente;
+  const ramasArbol = turnoArbol !== undefined ? ramasDe(turnoArbol) : [];
 
   return (
     <div className="grid h-full min-h-0 grid-cols-[17rem_minmax(0,1fr)_22rem] gap-4">
@@ -303,18 +313,60 @@ export default function Playground() {
         </div>
       </section>
 
-      <InspectorToken
-        tokens={ramaSeleccionada?.tokens ?? null}
-        indice={seleccion?.indice ?? null}
-        onMover={(indice) => seleccion && setSeleccion({ ...seleccion, indice })}
-        estado={estadoToken}
-        bloqueado={generando || !!ramaSeleccionada?.generando}
-        onBifurcar={
-          seleccion && ramaSeleccionada
-            ? (alt) => bifurcar(seleccion.turno, ramaSeleccionada, seleccion.indice, alt)
-            : undefined
-        }
-      />
+      <div className="flex min-h-0 flex-col gap-2">
+        <div className="flex gap-1 text-xs">
+          {(["inspector", "ramas"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPanel(p)}
+              className={`flex-1 rounded-md px-3 py-1.5 ${panel === p ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-900"}`}
+            >
+              {p === "inspector" ? "Inspector" : `Ramas${ramasArbol.length > 1 ? ` (${ramasArbol.length - 1})` : ""}`}
+            </button>
+          ))}
+        </div>
+
+        {panel === "inspector" ? (
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <InspectorToken
+              tokens={ramaSeleccionada?.tokens ?? null}
+              indice={seleccion?.indice ?? null}
+              onMover={(indice) => seleccion && setSeleccion({ ...seleccion, indice })}
+              estado={estadoToken}
+              bloqueado={generando || !!ramaSeleccionada?.generando}
+              onBifurcar={
+                seleccion && ramaSeleccionada
+                  ? (alt) => bifurcar(seleccion.turno, ramaSeleccionada, seleccion.indice, alt)
+                  : undefined
+              }
+            />
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-sm">
+            {turnoArbol === undefined ? (
+              <p className="text-zinc-500">Todavía no hay respuestas. Cuando forces una alternativa desde el inspector, acá vas a ver el árbol.</p>
+            ) : (
+              <>
+                <p className="text-[11px] leading-snug text-zinc-500">
+                  Cada nodo es una versión de la respuesta. Clic para verla: la rama activa es la que sigue la conversación.
+                  PPL = perplejidad de la parte nueva.
+                </p>
+                <div className="min-h-0 flex-1">
+                  <ArbolRamas
+                    ramas={ramasArbol}
+                    activa={ramaActiva[turnoArbol] ?? ID_RAIZ}
+                    onElegir={(id) => {
+                      setRamaActiva((prev) => ({ ...prev, [turnoArbol]: id }));
+                      setTurnoVista(turnoArbol);
+                      setSeleccion(null);
+                    }}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
