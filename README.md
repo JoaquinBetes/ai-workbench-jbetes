@@ -37,6 +37,7 @@ ai-workbench-jbetes/
 │       │   ├── api.ts              cliente de la API (incluye el lector de SSE)
 │       │   ├── useStreamingChat.ts hook de conversación con streaming
 │       │   ├── probs.ts            probabilidad, entropía, perplejidad
+│       │   ├── agrupar.ts          agrupar respuestas iguales y su entropía
 │       │   ├── ramas.ts            modelo de datos de las ramas
 │       │   └── useModelos.ts       lista de modelos de Ollama
 │       └── components/
@@ -55,7 +56,7 @@ ai-workbench-jbetes/
 - [x] **Cap. 2 · Entrega 1 — Playground:** controles de sampling, inspector de tokens con alternativas, métricas (confianza, perplejidad, token más dudoso)
 - [x] **Cap. 2 · Entrega 2 — Ramas:** forzar un token alternativo, seguir la respuesta desde ahí y navegar las ramas en un árbol
 - [x] **Cap. 2 · Entrega 3a — Comparador, lado a lado:** el mismo prompt a varios modelos, con métricas y gráficos de resumen
-- [ ] **Cap. 2 · Entrega 3b — Variabilidad:** el mismo prompt N veces e histograma de respuestas
+- [x] **Cap. 2 · Entrega 3b — Variabilidad:** el mismo prompt N veces, histograma de respuestas, respuesta mayoritaria, entropía e historial por temperatura
 - [ ] **Cap. 2 · Entrega 3c — Salidas estructuradas:** esquemas JSON con tres métodos
 - [ ] **Cap. 3-4 — Arena y evaluador:** comparaciones a ciegas, ranking Elo, datasets de prueba, LLM juez
 - [ ] **Cap. 5 — Prompt studio:** versionado, A/B, pruebas de inyección
