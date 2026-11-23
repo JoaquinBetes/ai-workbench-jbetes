@@ -33,18 +33,24 @@ ai-workbench-jbetes/
 ├── frontend/
 │   ├── package.json
 │   ├── vite.config.ts          en desarrollo reenvía /api al backend
+│   ├── public/assets/          kit de la skill de taste (luz del campo de prompt), tal cual
 │   └── src/
-│       ├── App.tsx                 layout y pestañas (un módulo por capítulo)
+│       ├── App.tsx                 shell: vistas, atajos globales, paleta de comandos
+│       ├── index.css               sistema visual (tokens, paneles, botones, movimiento)
 │       ├── lib/
 │       │   ├── api.ts              cliente de la API (incluye el lector de SSE)
+│       │   ├── telemetria.ts       velocidad en vivo, historial de la sesión, salud
+│       │   ├── comandos.ts         registro de comandos para la paleta (Ctrl+K)
+│       │   ├── formato.ts          números con formato argentino
 │       │   ├── useStreamingChat.ts hook de conversación con streaming
-│       │   ├── probs.ts            probabilidad, entropía, perplejidad
+│       │   ├── probs.ts            probabilidad, entropía, duda, perplejidad
 │       │   ├── agrupar.ts          agrupar respuestas iguales y su entropía
 │       │   ├── ramas.ts            modelo de datos de las ramas
 │       │   └── useModelos.ts       lista de modelos de Ollama
 │       └── components/
+│           ├── shell/              barra superior, barra de estado, paleta y atajos
+│           ├── ui/                 piezas compartidas (controles, selector de modelo, prompt)
 │           ├── Chat.tsx            chat simple
-│           ├── HealthBadge.tsx     estado de la conexión con Ollama
 │           ├── playground/         capítulo 2: playground, inspector y ramas
 │           └── comparador/         capítulo 2: comparador de modelos
 ├── Dockerfile
@@ -60,12 +66,29 @@ ai-workbench-jbetes/
 - [x] **Cap. 2 · Entrega 3a — Comparador, lado a lado:** el mismo prompt a varios modelos, con métricas y gráficos de resumen
 - [x] **Cap. 2 · Entrega 3b — Variabilidad:** el mismo prompt N veces, histograma de respuestas, respuesta mayoritaria, entropía e historial por temperatura
 - [x] **Cap. 2 · Entrega 3c — Salidas estructuradas:** solo prompt vs. post-proceso vs. sampling restringido, con validez, esquema y exactitud
+- [x] **Rediseño de la interfaz:** sistema visual propio, barra de estado con telemetría en vivo, paleta de comandos y atajos de teclado
 - [ ] **Cap. 3-4 — Arena y evaluador:** comparaciones a ciegas, ranking Elo, datasets de prueba, LLM juez
 - [ ] **Cap. 5 — Prompt studio:** versionado, A/B, pruebas de inyección
 - [ ] **Cap. 6 — RAG y agentes:** documentos, chunks, mapa de embeddings, trazas de agente
 - [ ] **Cap. 7-8 — Fine-tuning studio:** datos sintéticos, QLoRA, curva de pérdida, publicar en Ollama
 - [ ] **Cap. 9 — Panel de inferencia:** TTFT, tokens/s, VRAM, pruebas de carga
 - [ ] **Cap. 10 — Gateway y observabilidad:** guardrails, caché, trazas, feedback
+
+## Interfaz
+
+Tema oscuro único, pensado como un instrumento de laboratorio. La paleta (soot-pale-lime), la
+tipografía (Funnel Display, Funnel Sans y DM Mono) y los radios (sharp) los repartió la skill
+de taste; las fuentes están dentro del proyecto, así que funciona sin internet.
+
+| Atajo | Qué hace |
+|---|---|
+| `Ctrl` `K` | Paleta de comandos |
+| `Alt` `1` / `2` / `3` | Playground, Comparador, Chat (Chrome se reserva Ctrl + número) |
+| `/` | Escribir en el prompt de la vista |
+| `←` `→` | Recorrer los tokens en el inspector |
+| `1` … `9` | Forzar esa alternativa del token elegido (crea una rama) |
+| `Esc` | Detener la generación o soltar el token |
+| `?` | Lista de atajos |
 
 ## Desarrollo (en el servidor, con VS Code Remote)
 
