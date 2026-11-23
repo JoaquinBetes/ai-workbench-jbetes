@@ -1,1 +1,446 @@
 @import "tailwindcss";
+
+/*
+  AI Workbench JBetes — sistema visual.
+
+  Repartido con la skill de taste (start.mjs deal --page software):
+    paleta  soot-pale-lime  (fondo casi negro, acento lima pálido)
+    letra   funnel          (Funnel Display / Funnel Sans + DM Mono)
+    radio   sharp           (4 / 6 / 8 px, herramientas de desarrollo)
+  El bloque --p-* es el que imprimió start.mjs, sin tocar. Todo lo demás se
+  deriva de ahí: no hay otro color, escala de tipos ni de radios en la app.
+*/
+
+:root {
+  --p-bg: #0f0f0f; --p-surface: #1a1a1a; --p-ink: #ffffff; --p-muted: #8f8f8f;
+  --p-accent: #dafa9c; --p-accent-ink: #0f0f0f; --p-action: #dafa9c; --p-action-ink: #0f0f0f;
+  --p-inv-bg: #ffffff; --p-inv-surface: #ececec; --p-inv-ink: #0f0f0f; --p-inv-muted: #5f5f5f;
+  --p-inv-accent: #0f0f0f; --p-inv-accent-ink: #ffffff; --p-inv-action: #0f0f0f; --p-inv-action-ink: #ffffff;
+  --font-display: "Funnel Display Variable", "Funnel Display", system-ui, sans-serif;
+  --font-text: "Funnel Sans Variable", "Funnel Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 400;
+  --display-tracking: -0.03em;
+
+  /* nombres que leen los componentes del kit (fx.js lee --bg --surface --ink --muted --accent) */
+  --bg: var(--p-bg);
+  --surface: var(--p-surface);
+  --ink: var(--p-ink);
+  --muted: var(--p-muted);
+  --accent: var(--p-accent);
+  --accent-ink: var(--p-accent-ink);
+  --action: var(--p-action);
+  --action-ink: var(--p-action-ink);
+
+  /* pasos derivados: tinta sobre el fondo, como hace el kit con color-mix */
+  --ink-2: color-mix(in oklab, var(--ink) 84%, var(--bg));        /* texto largo: menos encandilamiento */
+  --panel: color-mix(in oklab, var(--ink) 4%, var(--bg));
+  --raised: color-mix(in oklab, var(--ink) 7.5%, var(--bg));
+  --sunken: color-mix(in oklab, var(--ink) 1.5%, var(--bg));
+  --line: color-mix(in oklab, var(--ink) 9%, transparent);
+  --line-2: color-mix(in oklab, var(--ink) 16%, transparent);
+  --hi: color-mix(in oklab, var(--ink) 6%, transparent);           /* luz fina en el borde superior */
+  --accent-soft: color-mix(in oklab, var(--accent) 14%, transparent);
+  --accent-line: color-mix(in oklab, var(--accent) 45%, transparent);
+
+  /* datos: un solo color para la duda, y la serie categórica validada (dataviz, modo oscuro) */
+  --doubt: #f5b452;
+  --danger: #e66767;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+
+  /* escala de tipos (nada por debajo de 13 px) */
+  --t-label: 13px;
+  --t-small: 14px;
+  --t-body: 16px;
+  --t-lead: 18px;
+  --t-h3: 22px;
+  --t-stat: 32px;
+
+  /* espacio 4/8 y radios sharp */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px;
+  --r-sm: 4px; --r-md: 6px; --r-lg: 8px; --r-btn: 4px;
+
+  /* movimiento (motion.md de taste, coincide con Emil) */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --ease-enter: cubic-bezier(.22, 1, .36, 1);
+  --ease-io: cubic-bezier(.65, 0, .35, 1);
+  --dur: 180ms;
+  --m-in: 150ms; --m-out: 120ms; --m-press: 90ms; --m-panel: 200ms; --m-slide: 240ms;
+
+  --bar-top: 52px;
+  --bar-bottom: 30px;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-raised: var(--raised);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-accent: var(--accent);
+  --color-doubt: var(--doubt);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-text);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
+  --text-label: 13px;
+  --text-small: 14px;
+  --text-body: 16px;
+  --text-lead: 18px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+}
+
+@layer base {
+  /* ------------------------------------------------------------------ base */
+  html, body, #root { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 var(--t-small)/1.5 var(--font-text);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "ss01";
+    overflow: hidden;
+  }
+  ::selection { background: var(--accent); color: var(--accent-ink); }
+  :focus-visible { outline: 2px solid var(--action); outline-offset: 2px; }
+  button { cursor: pointer; font: inherit; color: inherit; }
+  button:disabled { cursor: not-allowed; }
+  /* barras de scroll finas, del color de las líneas */
+  * { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+}
+
+/* Componentes en su capa: las utilidades de Tailwind pueden ajustarlos (alto, padding, etc.). */
+@layer components {
+  .num, .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .num { font-feature-settings: "tnum"; }
+  .display { font-family: var(--font-display); font-weight: var(--display-weight); letter-spacing: var(--display-tracking); }
+
+  /* ------------------------------------------------------------------ fondo
+     El "suelo" del laboratorio: casi negro, una luz lima muy baja arriba a la
+     izquierda y una retícula de puntos que se apaga hacia abajo. Quieto: no se mueve. */
+  .app-ground {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(900px 420px at 12% -8%, color-mix(in oklab, var(--accent) 9%, transparent), transparent 70%),
+      radial-gradient(700px 380px at 92% 0%, color-mix(in oklab, var(--s1) 7%, transparent), transparent 70%);
+  }
+  .app-ground::after {
+    content: ""; position: absolute; inset: 0;
+    background-image: radial-gradient(color-mix(in oklab, var(--ink) 9%, transparent) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+    -webkit-mask-image: radial-gradient(1200px 600px at 50% 0%, #000 10%, transparent 75%);
+    mask-image: radial-gradient(1200px 600px at 50% 0%, #000 10%, transparent 75%);
+  }
+
+  /* ------------------------------------------------------------------ paneles
+     Un solo estilo de panel: superficie, línea de 1 px y una luz fina arriba.
+     Como máximo dos niveles (panel > bloque). */
+  .panel {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: inset 0 1px 0 var(--hi), 0 1px 0 rgb(0 0 0 / .4), 0 18px 40px -24px rgb(0 0 0 / .6);
+  }
+  .panel-head {
+    display: flex; align-items: center; gap: var(--s-2);
+    min-height: 44px; padding: 0 var(--s-4);
+    border-bottom: 1px solid var(--line);
+  }
+  .panel-title { font: 500 var(--t-label)/1.2 var(--font-text); color: var(--ink); letter-spacing: .005em; }
+  .panel-meta { font: 400 var(--t-label)/1.2 var(--font-mono); color: var(--muted); }
+  .well { background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r-md); }
+  .label { font: 500 var(--t-label)/1.3 var(--font-text); color: var(--muted); }
+  .hint { font: 400 var(--t-label)/1.5 var(--font-text); color: var(--muted); text-wrap: pretty; }
+  .rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+  /* ------------------------------------------------------------------ botones
+     Un par: primario (lima) y secundario (contorno). Hover: paso de 1 px hacia
+     arriba y el relleno se aclara; press: 1 px abajo y scale(.985). Solo con mouse. */
+  .btn {
+    --h: 34px;
+    position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: var(--h); padding: 0 14px; border-radius: var(--r-btn);
+    font: 500 var(--t-label)/1 var(--font-text); white-space: nowrap; user-select: none;
+    border: 1px solid var(--line-2); background: transparent; color: var(--ink);
+    transition: transform var(--m-out) var(--ease), background-color var(--m-out) var(--ease),
+                border-color var(--m-out) var(--ease), color var(--m-out) var(--ease), opacity var(--m-out) var(--ease);
+  }
+  .btn svg { width: 15px; height: 15px; flex: none; }
+  .btn--primary {
+    background: var(--action); color: var(--action-ink); border-color: transparent;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .45), 0 0 0 1px rgb(0 0 0 / .2), 0 6px 18px -8px color-mix(in oklab, var(--accent) 55%, transparent);
+  }
+  .btn--danger { color: var(--danger); border-color: color-mix(in oklab, var(--danger) 45%, transparent); }
+  .btn--quiet { border-color: transparent; color: var(--muted); }
+  .btn--sm { --h: 28px; padding: 0 10px; }
+  .btn--icon { width: var(--h); padding: 0; }
+  .btn:disabled { opacity: .45; }
+  @media (hover: hover) and (pointer: fine) {
+    .btn:not(:disabled):hover { transform: translateY(-1px); transition-duration: var(--m-in); background: var(--raised); border-color: color-mix(in oklab, var(--ink) 28%, transparent); }
+    .btn--primary:not(:disabled):hover { background: color-mix(in oklab, var(--action) 86%, var(--ink)); border-color: transparent; }
+    .btn--danger:not(:disabled):hover { background: color-mix(in oklab, var(--danger) 12%, transparent); border-color: var(--danger); }
+    .btn--quiet:not(:disabled):hover { color: var(--ink); border-color: transparent; }
+  }
+  .btn:not(:disabled):active { transform: translateY(1px) scale(.985); transition-duration: var(--m-press); }
+
+  /* ------------------------------------------------------------------ campos */
+  .field {
+    width: 100%; min-height: 34px; padding: 7px 10px;
+    background: var(--sunken); color: var(--ink);
+    border: 1px solid var(--line-2); border-radius: var(--r-md);
+    font: 400 var(--t-small)/1.5 var(--font-text);
+    transition: border-color 140ms var(--ease), box-shadow 140ms var(--ease);
+  }
+  .field::placeholder { color: var(--muted); }
+  .field:focus { outline: none; border-color: var(--action); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .field--mono { font-family: var(--font-mono); font-size: var(--t-label); }
+  .field[aria-invalid="true"] { border-color: var(--danger); }
+  textarea.field { resize: vertical; }
+
+  /* ------------------------------------------------------------------ interruptor
+     La perilla se desliza 16 px y se estira 4 px mientras se presiona (transform). */
+  .switch {
+    position: relative; flex: none; width: 34px; height: 18px; padding: 0; border-radius: 99px;
+    background: var(--raised); border: 1px solid var(--line-2);
+    transition: background-color 180ms var(--ease), border-color 180ms var(--ease);
+  }
+  .switch::before {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 99px;
+    background: var(--muted); transform-origin: left center;
+    transition: transform 180ms var(--ease), background-color 180ms var(--ease);
+  }
+  .switch[aria-checked="true"] { background: var(--accent); border-color: transparent; }
+  .switch[aria-checked="true"]::before { background: var(--accent-ink); transform: translateX(16px); }
+  .switch:active::before { transform: scaleX(1.33); }
+  .switch[aria-checked="true"]:active::before { transform: translateX(16px) scaleX(1.33); transform-origin: right center; }
+
+  /* ------------------------------------------------------------------ deslizador
+     Pista de 2 px, tramo recorrido en lima (via --pct), perilla blanca. */
+  .range {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer;
+  }
+  .range::-webkit-slider-runnable-track {
+    height: 2px; border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent) 0 var(--pct, 50%), var(--line-2) var(--pct, 50%) 100%);
+  }
+  .range::-moz-range-track { height: 2px; border-radius: 2px; background: var(--line-2); }
+  .range::-moz-range-progress { height: 2px; border-radius: 2px; background: var(--accent); }
+  .range::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; margin-top: -5px; border-radius: 99px;
+    background: var(--ink); border: 0; box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--accent-line);
+    transition: transform var(--m-out) var(--ease);
+  }
+  .range::-moz-range-thumb {
+    width: 12px; height: 12px; border-radius: 99px; background: var(--ink); border: 0;
+    box-shadow: 0 0 0 3px var(--bg), 0 0 0 4px var(--accent-line);
+  }
+  .range:active::-webkit-slider-thumb { transform: scale(1.2); transition-duration: var(--m-press); }
+  .range:focus { outline: none; }
+  .range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--bg), 0 0 0 5px var(--action); }
+
+  /* ------------------------------------------------------------------ control segmentado
+     Un indicador que se desliza por transform (240 ms). Se mueve solo cuando el
+     cambio lo hizo el puntero; con teclado salta (data-instant). */
+  .seg {
+    position: relative; display: inline-flex; padding: 3px; gap: 2px; isolation: isolate;
+    background: var(--sunken); border: 1px solid var(--line); border-radius: calc(var(--r-md) + 2px);
+  }
+  .seg__opt {
+    position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 7px;
+    height: 28px; padding: 0 12px; border: 0; background: transparent; border-radius: var(--r-md);
+    font: 500 var(--t-label)/1 var(--font-text); color: var(--muted); white-space: nowrap;
+    transition: color var(--m-out) var(--ease);
+  }
+  .seg__opt svg { width: 14px; height: 14px; }
+  .seg__opt[aria-selected="true"], .seg__opt[aria-pressed="true"] { color: var(--p-inv-ink); transition-duration: var(--m-slide); }
+  @media (hover: hover) and (pointer: fine) {
+    .seg__opt:not([aria-selected="true"]):not([aria-pressed="true"]):hover { color: var(--ink); transition-duration: var(--m-in); }
+  }
+  .seg__ind {
+    position: absolute; z-index: 0; top: 3px; left: 0; height: 28px; border-radius: var(--r-md);
+    background: var(--p-inv-bg); box-shadow: 0 1px 0 rgb(255 255 255 / .5) inset, 0 2px 10px -2px rgb(0 0 0 / .6);
+  }
+  .seg[data-instant] .seg__ind, .seg[data-instant] .seg__opt { transition: none; }
+  .seg--sm .seg__opt { height: 24px; padding: 0 10px; }
+  .seg--sm .seg__ind { height: 24px; }
+  .seg--block { display: flex; }
+  .seg--block .seg__opt { flex: 1; justify-content: center; padding: 0 6px; }
+
+  /* ------------------------------------------------------------------ piezas chicas */
+  .kbd {
+    display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px;
+    border-radius: var(--r-sm); border: 1px solid var(--line-2); border-bottom-width: 2px;
+    background: var(--raised); font: 500 var(--t-label)/1 var(--font-mono); color: var(--muted);
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 10px;
+    border-radius: 99px; border: 1px solid var(--line-2); background: transparent;
+    font: 400 var(--t-label)/1 var(--font-text); color: var(--muted); white-space: nowrap;
+    transition: color var(--m-out) var(--ease), border-color var(--m-out) var(--ease), background-color var(--m-out) var(--ease), transform var(--m-out) var(--ease);
+  }
+  .chip[aria-pressed="true"] { color: var(--ink); border-color: var(--accent-line); background: var(--accent-soft); }
+  @media (hover: hover) and (pointer: fine) {
+    button.chip:hover { color: var(--ink); border-color: color-mix(in oklab, var(--ink) 30%, transparent); transition-duration: var(--m-in); }
+  }
+  button.chip:active { transform: scale(.97); transition-duration: var(--m-press); }
+  .tag {
+    display: inline-flex; align-items: center; gap: 6px; height: 22px; white-space: nowrap; padding: 0 8px; border-radius: var(--r-sm);
+    font: 500 var(--t-label)/1 var(--font-mono); color: var(--muted); background: var(--raised); border: 1px solid var(--line);
+  }
+  .tag--accent { color: var(--accent); background: var(--accent-soft); border-color: color-mix(in oklab, var(--accent) 25%, transparent); }
+  .tag--doubt { color: var(--doubt); background: color-mix(in oklab, var(--doubt) 12%, transparent); border-color: color-mix(in oklab, var(--doubt) 25%, transparent); }
+  .tag--danger { color: var(--danger); background: color-mix(in oklab, var(--danger) 12%, transparent); border-color: color-mix(in oklab, var(--danger) 25%, transparent); }
+
+  /* señal de vida: el punto queda quieto, un anillo crece y se apaga (2,4 s) */
+  .live { position: relative; display: inline-block; width: 7px; height: 7px; border-radius: 99px; background: var(--accent); flex: none; }
+  .live::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1px solid var(--accent);
+    animation: live-ring 2.4s var(--ease) infinite;
+  }
+  .live--off { background: var(--danger); }
+  .live--off::after { display: none; }
+  .live--idle::after { display: none; }
+  @keyframes live-ring { 0% { transform: scale(1); opacity: .9; } 70%, 100% { transform: scale(3.2); opacity: 0; } }
+
+  /* barras de nivel (0,6 s) mientras hay una generación en curso */
+  .level { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+  .level i { width: 2px; height: 100%; background: var(--accent); border-radius: 1px; transform-origin: bottom; animation: level .6s linear infinite alternate; }
+  .level i:nth-child(2) { animation-delay: -.2s; }
+  .level i:nth-child(3) { animation-delay: -.4s; }
+  @keyframes level { from { transform: scaleY(.25); } to { transform: scaleY(1); } }
+
+  /* girador de 1 s, 14 px */
+  .spin { width: 14px; height: 14px; border-radius: 99px; border: 1.5px solid var(--line-2); border-top-color: currentColor; animation: spin 1s linear infinite; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ------------------------------------------------------------------ tooltips
+     Aparecen a los 400 ms; si ya se vio uno hace instantes, el siguiente sale sin
+     demora ni animación (html.tips-calientes). */
+  [data-tip] { position: relative; }
+  [data-tip]::after {
+    content: attr(data-tip); position: absolute; z-index: 60; left: 50%; top: calc(100% + 8px);
+    transform: translate(-50%, -2px) scale(.97); transform-origin: top center; opacity: 0; pointer-events: none;
+    padding: 6px 8px; border-radius: var(--r-sm); background: var(--raised); border: 1px solid var(--line-2);
+    font: 400 var(--t-label)/1.3 var(--font-text); color: var(--ink); white-space: nowrap;
+    box-shadow: 0 8px 24px -8px rgb(0 0 0 / .7);
+    transition: opacity 125ms var(--ease), transform 125ms var(--ease); transition-delay: 0ms;
+  }
+  [data-tip-pos="top"]::after { top: auto; bottom: calc(100% + 8px); transform-origin: bottom center; transform: translate(-50%, 2px) scale(.97); }
+  [data-tip-pos="left"]::after { left: auto; right: 0; transform: translate(0, -2px) scale(.97); transform-origin: top right; }
+  @media (hover: hover) and (pointer: fine) {
+    [data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0) scale(1); transition-delay: 400ms; }
+    [data-tip-pos="left"]:hover::after { transform: translate(0, 0) scale(1); }
+    html.tips-calientes [data-tip]:hover::after { transition: none; }
+  }
+
+  /* ------------------------------------------------------------------ tokens del modelo */
+  .tokens { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 var(--t-body)/1.75 var(--font-text); color: var(--ink-2); }
+  .tok {
+    border-radius: 2px; cursor: pointer;
+    text-decoration-line: underline; text-decoration-thickness: 2px; text-underline-offset: 5px;
+    text-decoration-color: color-mix(in oklab, var(--doubt) var(--d, 0%), transparent);
+    background-color: color-mix(in oklab, var(--doubt) var(--f, 0%), transparent);
+    transition: background-color var(--m-out) var(--ease), color var(--m-out) var(--ease);
+  }
+  .tokens--plain .tok { text-decoration-color: transparent; background-color: transparent; }
+  @media (hover: hover) and (pointer: fine) {
+    .tok:hover { background-color: var(--raised); color: var(--ink); transition-duration: var(--m-in); }
+  }
+  .tok--inh { color: color-mix(in oklab, var(--ink-2) 58%, var(--bg)); text-decoration-color: transparent; background-color: transparent; }
+  .tok--forced { color: var(--accent-ink); background: var(--accent); text-decoration-color: transparent; padding: 0 1px; }
+  .tok--sel { outline: 1.5px solid var(--accent); outline-offset: 1px; color: var(--ink); background-color: var(--accent-soft); }
+  .tok--forced.tok--sel { background: var(--accent); color: var(--accent-ink); }
+  /* cada token que llega aparece de un desenfoque corto: se ve el texto "formarse" */
+  .tok--new { animation: tok-in 260ms var(--ease) both; }
+  @keyframes tok-in { from { opacity: 0; filter: blur(3px); } to { opacity: 1; filter: blur(0); } }
+  .caret { display: inline-block; width: 7px; height: 1.05em; margin-left: 2px; vertical-align: -2px; background: var(--accent); animation: caret 1s steps(1) infinite; }
+  @keyframes caret { 50% { opacity: 0; } }
+
+  /* ------------------------------------------------------------------ entrada de la app
+     Una sola vez al cargar: la barra y los paneles suben 8 px y aparecen, con un
+     escalonado corto y desparejo. Nunca más en la sesión. */
+  .enter { animation: enter 520ms var(--ease-enter) both; animation-delay: var(--delay, 0ms); }
+  @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  .fade-in { animation: fade-in var(--m-panel) var(--ease) both; }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  .rise-in { animation: rise-in 240ms var(--ease) both; }
+  @keyframes rise-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  /* ------------------------------------------------------------------ superposiciones (paleta, atajos)
+     Se abren con teclado cientos de veces: sin animación de apertura (como Raycast). */
+  .overlay { position: fixed; inset: 0; z-index: 80; background: rgb(0 0 0 / .55); display: grid; place-items: start center; padding-top: 14vh; }
+  .sheet {
+    width: min(640px, calc(100vw - 32px)); background: color-mix(in oklab, var(--ink) 5%, var(--bg));
+    border: 1px solid var(--line-2); border-radius: calc(var(--r-lg) + 4px);
+    box-shadow: inset 0 1px 0 var(--hi), 0 30px 80px -20px rgb(0 0 0 / .9), 0 0 0 1px rgb(0 0 0 / .5);
+    overflow: hidden;
+  }
+
+  /* ------------------------------------------------------------------ popover (selector de modelo)
+     Crece desde su disparador (transform-origin arriba) en 160 ms. */
+  .popover {
+    position: absolute; z-index: 50; min-width: 100%;
+    background: color-mix(in oklab, var(--ink) 6%, var(--bg)); border: 1px solid var(--line-2); border-radius: var(--r-lg);
+    box-shadow: inset 0 1px 0 var(--hi), 0 20px 50px -12px rgb(0 0 0 / .85);
+    transform-origin: top left; animation: pop-in 160ms var(--ease) both;
+  }
+  @keyframes pop-in { from { opacity: 0; transform: scale(.97) translateY(-4px); } to { opacity: 1; transform: none; } }
+  .opt {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--r-md);
+    background: transparent; text-align: left; color: var(--ink);
+  }
+  .opt[data-active="true"] { background: var(--raised); }
+  .opt[aria-selected="true"] .opt__check { opacity: 1; }
+  .opt__check { opacity: 0; color: var(--accent); }
+
+  /* ------------------------------------------------------------------ gráficos (Recharts) */
+  .recharts-wrapper { font-family: var(--font-mono); }
+  .recharts-cartesian-axis-tick-value { font-size: var(--t-label); }
+  .recharts-tooltip-wrapper { outline: none; }
+  .viz-tip {
+    padding: 8px 10px; border-radius: var(--r-md); background: var(--raised); border: 1px solid var(--line-2);
+    box-shadow: 0 10px 30px -10px rgb(0 0 0 / .8); font: 400 var(--t-label)/1.5 var(--font-text); color: var(--ink);
+  }
+
+  /* ------------------------------------------------------------------ React Flow (árbol de ramas) */
+  .react-flow { --xy-background-color: transparent; }
+  .react-flow__attribution { display: none; }
+  .react-flow__node { font-family: var(--font-text); }
+}
+
+/* Fuera de capas a propósito: tiene que ganarle al CSS del kit, que tampoco usa capas. */
+/* ------------------------------------------------------------------ prompt con luz (fx-prompt del kit) */
+.composer .cx-prompt { width: 100%; }
+.composer .cx-prompt__input { font-size: var(--t-body); max-height: 200px; overflow-y: auto; }
+.composer .cx-prompt__hints { justify-content: flex-start; padding: 0 44px 0 0; margin-top: calc(var(--inset) + var(--s-3)); }
+.composer .cx-prompt__hints button { font-family: var(--font-text); }
+.composer .cx-prompt__send { width: auto; padding: 0 12px; gap: 8px; border-radius: var(--r-btn); display: inline-flex; font: 500 var(--t-label)/1 var(--font-text); transition: transform var(--m-out) var(--ease), background-color var(--m-out) var(--ease); }
+.composer .cx-prompt__send:disabled { opacity: .4; cursor: not-allowed; }
+.composer .cx-prompt__send:not(:disabled):active { transform: translateY(1px) scale(.985); transition-duration: var(--m-press); }
+@media (hover: hover) and (pointer: fine) {
+  .composer .cx-prompt__send:not(:disabled):hover { background: color-mix(in oklab, var(--action) 86%, var(--ink)); transition-duration: var(--m-in); }
+}
+.composer .cx-prompt__send--stop { background: transparent; color: var(--danger); border: 1px solid color-mix(in oklab, var(--danger) 45%, transparent); }
+.composer .cx-prompt__chip { font-family: var(--font-mono); color: var(--muted); }
+
+/* ------------------------------------------------------------------ movimiento reducido
+   Los colores siguen cambiando; nada se desplaza. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; }
+  .btn, .chip, .seg__ind, .switch::before, .range::-webkit-slider-thumb { transition-property: opacity, background-color, border-color, color !important; }
+  .btn:active, .chip:active, button.chip:active { transform: none !important; }
+  .live::after { display: none; }
+  .tok--new { animation: none; }
+}

@@ -1,11 +1,17 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-radius="sharp">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Workbench JBetes</title>
+    <title>Workbench · laboratorio de LLMs</title>
+    <meta name="description" content="Laboratorio local para entender cómo generan texto los modelos de lenguaje: sampling, ramas, comparación de modelos y salidas estructuradas." />
+    <meta name="theme-color" content="#0f0f0f" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Kit de la skill de taste (fx-prompt), servido tal cual desde /public/assets -->
+    <link rel="stylesheet" href="/assets/components/base.css" />
+    <link rel="stylesheet" href="/assets/components/fx-prompt/component.css" />
   </head>
-  <body class="bg-zinc-950 text-zinc-100">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
