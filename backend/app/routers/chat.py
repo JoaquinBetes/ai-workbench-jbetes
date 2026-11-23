@@ -38,6 +38,7 @@ class ChatRequest(BaseModel):
     seed: int | None = None
     think: bool = False
     top_logprobs: int = Field(5, ge=0, le=20, description="0 = sin logprobs")
+    max_tokens: int | None = Field(None, ge=1, le=8192, description="Tope de tokens a generar")
 
 
 def _sse(evento: dict) -> str:
@@ -72,6 +73,8 @@ async def chat_stream(req: ChatRequest, ollama: AsyncClient = Depends(get_ollama
         opciones = {"temperature": req.temperature, "top_p": req.top_p, "top_k": req.top_k}
         if req.seed is not None:
             opciones["seed"] = req.seed
+        if req.max_tokens is not None:
+            opciones["num_predict"] = req.max_tokens
         try:
             stream = await ollama.chat(
                 model=req.model,

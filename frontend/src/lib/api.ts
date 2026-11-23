@@ -44,6 +44,7 @@ export type ChatRequest = {
   seed?: number | null;
   think?: boolean;
   top_logprobs?: number;
+  max_tokens?: number | null;
 };
 
 export async function getHealth(): Promise<Health> {

@@ -7,6 +7,7 @@ import { defineConfig } from "vite";
 // FastAPI sirve el frontend compilado y la API desde el mismo puerto.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: { chunkSizeWarningLimit: 1000 },
   server: {
     host: true,
     port: 5173,

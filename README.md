@@ -31,11 +31,15 @@ ai-workbench-jbetes/
 │   ├── package.json
 │   ├── vite.config.ts          en desarrollo reenvía /api al backend
 │   └── src/
-│       ├── App.tsx             layout y navegación entre módulos
-│       ├── lib/api.ts          cliente de la API (incluye el lector de SSE)
+│       ├── App.tsx                 layout y pestañas (un módulo por capítulo)
+│       ├── lib/
+│       │   ├── api.ts              cliente de la API (incluye el lector de SSE)
+│       │   ├── useStreamingChat.ts hook de conversación con streaming
+│       │   └── probs.ts            probabilidad, entropía, perplejidad
 │       └── components/
-│           ├── Chat.tsx        chat con tokens coloreados por probabilidad
-│           └── HealthBadge.tsx estado de la conexión con Ollama
+│           ├── Chat.tsx            chat simple
+│           ├── HealthBadge.tsx     estado de la conexión con Ollama
+│           └── playground/         módulo del capítulo 2
 ├── Dockerfile
 ├── docker-compose.yml
 └── .env.example
@@ -44,7 +48,9 @@ ai-workbench-jbetes/
 ## Hoja de ruta (un módulo por capítulo)
 
 - [x] **Base:** chat con streaming y tokens coloreados por probabilidad
-- [ ] **Cap. 2 — Playground y explorador de tokens:** controles de sampling, alternativas por token, ramas, comparación de modelos, salidas estructuradas
+- [x] **Cap. 2 · Entrega 1 — Playground:** controles de sampling, inspector de tokens con alternativas, métricas (confianza, perplejidad, token más dudoso)
+- [ ] **Cap. 2 · Entrega 2 — Ramas:** forzar un token alternativo y comparar caminos en un árbol
+- [ ] **Cap. 2 · Entrega 3 — Comparador y salidas estructuradas:** varios modelos lado a lado, variabilidad, esquemas JSON
 - [ ] **Cap. 3-4 — Arena y evaluador:** comparaciones a ciegas, ranking Elo, datasets de prueba, LLM juez
 - [ ] **Cap. 5 — Prompt studio:** versionado, A/B, pruebas de inyección
 - [ ] **Cap. 6 — RAG y agentes:** documentos, chunks, mapa de embeddings, trazas de agente
