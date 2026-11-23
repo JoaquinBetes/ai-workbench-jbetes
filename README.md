@@ -24,8 +24,10 @@ ai-workbench-jbetes/
 │       ├── main.py             arranque de FastAPI, /api/health, sirve el frontend
 │       ├── config.py           configuración (OLLAMA_HOST, etc.)
 │       ├── ollama_client.py    cliente de Ollama compartido
+│       ├── structured.py       extraer, reparar, validar y puntuar JSON
 │       └── routers/
 │           ├── models.py       GET  /api/models          modelos disponibles
+│           ├── structured.py   POST /api/structured/sample  salidas estructuradas (3 métodos)
 │           └── chat.py         POST /api/chat/stream     chat con streaming y logprobs
 │                               POST /api/chat/continue   seguir una respuesta desde un prefijo (ramas)
 ├── frontend/
@@ -57,7 +59,7 @@ ai-workbench-jbetes/
 - [x] **Cap. 2 · Entrega 2 — Ramas:** forzar un token alternativo, seguir la respuesta desde ahí y navegar las ramas en un árbol
 - [x] **Cap. 2 · Entrega 3a — Comparador, lado a lado:** el mismo prompt a varios modelos, con métricas y gráficos de resumen
 - [x] **Cap. 2 · Entrega 3b — Variabilidad:** el mismo prompt N veces, histograma de respuestas, respuesta mayoritaria, entropía e historial por temperatura
-- [ ] **Cap. 2 · Entrega 3c — Salidas estructuradas:** esquemas JSON con tres métodos
+- [x] **Cap. 2 · Entrega 3c — Salidas estructuradas:** solo prompt vs. post-proceso vs. sampling restringido, con validez, esquema y exactitud
 - [ ] **Cap. 3-4 — Arena y evaluador:** comparaciones a ciegas, ranking Elo, datasets de prueba, LLM juez
 - [ ] **Cap. 5 — Prompt studio:** versionado, A/B, pruebas de inyección
 - [ ] **Cap. 6 — RAG y agentes:** documentos, chunks, mapa de embeddings, trazas de agente
