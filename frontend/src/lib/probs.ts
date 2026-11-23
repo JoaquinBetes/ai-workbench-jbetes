@@ -1,9 +1,10 @@
 // Cálculos sobre las probabilidades de los tokens (capítulo 2: Sampling).
 import type { TokenLogprob } from "./api";
+import { porcentaje } from "./formato";
 
 export const prob = (logprob: number) => Math.exp(logprob);
 
-export const pct = (p: number, decimales = 1) => `${(p * 100).toFixed(decimales)}%`;
+export const pct = (p: number, decimales = 1) => porcentaje(p, decimales);
 
 /** Alternativas de un token, ordenadas, incluyendo siempre al token elegido. */
 export function alternativas(t: TokenLogprob) {
@@ -53,16 +54,13 @@ export function metricas(tokens: TokenLogprob[]): Metricas | null {
   };
 }
 
-/** Rojo (dudoso) → verde (seguro). */
-export function colorProbabilidad(p: number) {
-  return `hsla(${Math.round(p * 120)}, 75%, 45%, 0.35)`;
-}
-
-/** Transparente (seguro) → violeta intenso (mucha duda entre alternativas). */
-export function colorIncertidumbre(bits: number, k: number) {
-  const max = Math.log2(Math.max(k, 2));
-  const x = Math.min(bits / max, 1);
-  return `hsla(275, 80%, 60%, ${(x * 0.6).toFixed(2)})`;
+/**
+ * Duda normalizada de 0 (seguro) a 1 (máxima duda entre las k alternativas):
+ * la entropía dividida por log2(k). Es lo que pinta el subrayado ámbar.
+ */
+export function duda(t: TokenLogprob) {
+  const k = Math.max(t.top.length, 2);
+  return Math.min(entropia(t) / Math.log2(k), 1);
 }
 
 /** Hace visibles los espacios y saltos de línea dentro de un token. */
