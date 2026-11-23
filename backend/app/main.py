@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from ollama import AsyncClient
 
 from .config import settings
-from .routers import chat, models
+from .routers import chat, models, structured
 
 
 @asynccontextmanager
@@ -26,6 +26,7 @@ app = FastAPI(title="AI Workbench JBetes", version="0.1.0", lifespan=lifespan)
 
 app.include_router(models.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
+app.include_router(structured.router, prefix="/api")
 
 
 @app.get("/api/health", tags=["sistema"])
