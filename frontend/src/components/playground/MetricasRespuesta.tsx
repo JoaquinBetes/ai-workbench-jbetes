@@ -19,16 +19,24 @@ export default function MetricasRespuesta({
   tokens,
   stats,
   onSeleccionar,
+  desde = 0,
 }: {
   tokens: TokenLogprob[];
   stats?: Stats;
   onSeleccionar: (i: number) => void;
+  /** En una rama, las métricas se calculan solo sobre lo que generó el modelo (después del token forzado). */
+  desde?: number;
 }) {
-  const m = metricas(tokens);
+  const propios = tokens.slice(desde);
+  const m = metricas(propios);
   if (!m) return null;
-  const dudoso = tokens[m.indiceMasDudoso];
+  const dudoso = propios[m.indiceMasDudoso];
 
   return (
+    <>
+    {desde > 0 && (
+      <p className="mt-3 text-[11px] text-zinc-500">Métricas de la parte nueva de esta rama (después del token forzado).</p>
+    )}
     <div className="mt-3 grid grid-cols-2 gap-2 border-t border-zinc-700 pt-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
       <Tarjeta titulo="Tokens" valor={String(m.tokens)} ayuda="Cantidad de tokens generados" />
       <Tarjeta
@@ -55,8 +63,9 @@ export default function MetricasRespuesta({
         titulo="Más dudoso"
         valor={`${mostrarToken(dudoso.token)} · ${pct(Math.exp(dudoso.logprob))}`}
         ayuda="El token elegido con menor probabilidad. Clic para inspeccionarlo."
-        onClick={() => onSeleccionar(m.indiceMasDudoso)}
+        onClick={() => onSeleccionar(desde + m.indiceMasDudoso)}
       />
     </div>
+    </>
   );
 }

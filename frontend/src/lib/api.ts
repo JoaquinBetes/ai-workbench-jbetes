@@ -28,6 +28,7 @@ export type Stats = {
 };
 
 export type ChatEvent =
+  | { type: "meta"; method: string }
   | { type: "token"; content: string; logprobs: TokenLogprob[] }
   | { type: "thinking"; content: string }
   | { type: "done"; stats: Stats }
@@ -47,6 +48,12 @@ export type ChatRequest = {
   max_tokens?: number | null;
 };
 
+export type ContinueRequest = ChatRequest & {
+  /** Lo que el asistente ya "dijo"; la generación sigue desde acá. */
+  prefix: string;
+  thinking?: string | null;
+};
+
 export async function getHealth(): Promise<Health> {
   const res = await fetch("/api/health");
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -60,14 +67,11 @@ export async function getModels(): Promise<ModelInfo[]> {
 }
 
 /**
- * Manda un chat y devuelve los eventos a medida que llegan (streaming SSE).
- * Se usa con `for await (const ev of streamChat(...))`.
+ * Lee una respuesta Server-Sent Events y devuelve los eventos a medida que llegan.
+ * Se usa con `for await (const ev of ...)`.
  */
-export async function* streamChat(
-  body: ChatRequest,
-  signal?: AbortSignal,
-): AsyncGenerator<ChatEvent> {
-  const res = await fetch("/api/chat/stream", {
+async function* streamSSE(url: string, body: unknown, signal?: AbortSignal): AsyncGenerator<ChatEvent> {
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -94,3 +98,10 @@ export async function* streamChat(
     }
   }
 }
+
+/** Chat con streaming: una respuesta nueva del asistente. */
+export const streamChat = (body: ChatRequest, signal?: AbortSignal) => streamSSE("/api/chat/stream", body, signal);
+
+/** Sigue escribiendo una respuesta a partir de un prefijo (ramas). */
+export const streamContinue = (body: ContinueRequest, signal?: AbortSignal) =>
+  streamSSE("/api/chat/continue", body, signal);
