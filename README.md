@@ -25,8 +25,9 @@ ai-workbench-jbetes/
 │       ├── config.py           configuración (OLLAMA_HOST, etc.)
 │       ├── ollama_client.py    cliente de Ollama compartido
 │       └── routers/
-│           ├── models.py       GET  /api/models        modelos disponibles
-│           └── chat.py         POST /api/chat/stream   chat con streaming y logprobs
+│           ├── models.py       GET  /api/models          modelos disponibles
+│           └── chat.py         POST /api/chat/stream     chat con streaming y logprobs
+│                               POST /api/chat/continue   seguir una respuesta desde un prefijo (ramas)
 ├── frontend/
 │   ├── package.json
 │   ├── vite.config.ts          en desarrollo reenvía /api al backend
@@ -35,7 +36,8 @@ ai-workbench-jbetes/
 │       ├── lib/
 │       │   ├── api.ts              cliente de la API (incluye el lector de SSE)
 │       │   ├── useStreamingChat.ts hook de conversación con streaming
-│       │   └── probs.ts            probabilidad, entropía, perplejidad
+│       │   ├── probs.ts            probabilidad, entropía, perplejidad
+│       │   └── ramas.ts            modelo de datos de las ramas
 │       └── components/
 │           ├── Chat.tsx            chat simple
 │           ├── HealthBadge.tsx     estado de la conexión con Ollama
@@ -49,7 +51,7 @@ ai-workbench-jbetes/
 
 - [x] **Base:** chat con streaming y tokens coloreados por probabilidad
 - [x] **Cap. 2 · Entrega 1 — Playground:** controles de sampling, inspector de tokens con alternativas, métricas (confianza, perplejidad, token más dudoso)
-- [ ] **Cap. 2 · Entrega 2 — Ramas:** forzar un token alternativo y comparar caminos en un árbol
+- [x] **Cap. 2 · Entrega 2 — Ramas:** forzar un token alternativo, seguir la respuesta desde ahí y navegar las ramas en un árbol
 - [ ] **Cap. 2 · Entrega 3 — Comparador y salidas estructuradas:** varios modelos lado a lado, variabilidad, esquemas JSON
 - [ ] **Cap. 3-4 — Arena y evaluador:** comparaciones a ciegas, ranking Elo, datasets de prueba, LLM juez
 - [ ] **Cap. 5 — Prompt studio:** versionado, A/B, pruebas de inyección
@@ -69,6 +71,12 @@ uv sync
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 Documentación interactiva de la API: `http://<servidor>:8000/docs`
+
+**Tests del backend:**
+```bash
+cd backend
+uv run --group dev pytest
+```
 
 **Frontend** (terminal 2):
 ```bash
