@@ -1,12 +1,13 @@
-"""Salidas estructuradas: el mismo pedido con tres métodos distintos (capítulo 2).
+"""Salidas estructuradas: tres métodos para obtener JSON del modelo (capítulo 2).
 
-- prompt:       se pide JSON en el prompt y se intenta parsear la respuesta tal cual.
-- postproceso:  igual, pero si no parsea se extrae y repara el JSON del texto.
+- prompt:       se pide JSON en el prompt y la respuesta se acepta solo si ya es JSON.
+- postproceso:  la MISMA respuesta, pero si no parsea se extrae y repara el JSON.
 - restringido:  Ollama recibe el esquema en `format` y solo puede generar tokens
                 que mantengan el JSON válido (sampling restringido por gramática).
 
-Los tres reciben exactamente los mismos mensajes; solo cambia lo que pasa
-durante (restringido) o después (postproceso) de la generación.
+"prompt" y "postproceso" comparten una sola generación (modo "libre"): es la misma
+respuesta leída de dos formas, así la diferencia entre ambos es solo el post-proceso.
+Los dos modos reciben exactamente los mismos mensajes.
 """
 
 import json
@@ -24,6 +25,8 @@ from ..structured import errores_de_esquema, exactitud, extraer_json
 
 router = APIRouter(tags=["salidas estructuradas"])
 
+Metodo = Literal["prompt", "postproceso", "restringido"]
+
 
 class StructuredRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -31,24 +34,28 @@ class StructuredRequest(BaseModel):
     model: str
     esquema: dict = Field(..., alias="schema", description="JSON Schema que debe cumplir la respuesta")
     text: str = Field(..., description="Texto del que hay que extraer los datos")
-    method: Literal["prompt", "postproceso", "restringido"]
+    mode: Literal["libre", "restringido"] = Field(..., description="libre = evalúa prompt y postproceso")
     temperature: float = Field(0.7, ge=0, le=2)
     seed: int | None = None
     max_tokens: int = Field(512, ge=16, le=4096)
     expected: Any | None = Field(None, description="Respuesta correcta, para medir exactitud (opcional)")
 
 
-class StructuredResult(BaseModel):
-    raw: str
+class Evaluacion(BaseModel):
     parsed: Any | None
     json_ok: bool
     schema_ok: bool
     schema_errors: list[str]
     repairs: list[str]
     accuracy: float | None
+
+
+class StructuredResult(BaseModel):
+    raw: str
     latency_s: float
     output_tokens: int | None
     tokens_per_second: float | None
+    evaluaciones: dict[Metodo, Evaluacion]
 
 
 def mensajes(esquema: dict, texto: str) -> list[dict]:
@@ -57,6 +64,25 @@ def mensajes(esquema: dict, texto: str) -> list[dict]:
         "este JSON Schema, sin texto adicional:\n" + json.dumps(esquema, ensure_ascii=False, indent=2)
     )
     return [{"role": "system", "content": instruccion}, {"role": "user", "content": texto}]
+
+
+def evaluar(raw: str, esquema: dict, esperado: Any | None, reparar: bool) -> Evaluacion:
+    parsed, repairs = None, []
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        if reparar:
+            parsed, repairs = extraer_json(raw)
+    json_ok = parsed is not None
+    schema_errors = errores_de_esquema(parsed, esquema) if json_ok else ["la respuesta no es JSON"]
+    return Evaluacion(
+        parsed=parsed,
+        json_ok=json_ok,
+        schema_ok=json_ok and not schema_errors,
+        schema_errors=schema_errors,
+        repairs=repairs,
+        accuracy=exactitud(esperado, parsed) if esperado is not None else None,
+    )
 
 
 @router.post("/structured/sample", response_model=StructuredResult)
@@ -75,34 +101,25 @@ async def structured_sample(req: StructuredRequest, ollama: AsyncClient = Depend
         model=req.model,
         messages=mensajes(req.esquema, req.text),
         think=False,
-        format=req.esquema if req.method == "restringido" else None,
+        format=req.esquema if req.mode == "restringido" else None,
         options=opciones,
     )
     latencia = time.perf_counter() - inicio
     raw = respuesta.message.content or ""
-
-    # Parseo: "prompt" y "restringido" aceptan la respuesta solo si ya es JSON puro;
-    # "postproceso" intenta rescatarla.
-    parsed, repairs = None, []
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError:
-        if req.method == "postproceso":
-            parsed, repairs = extraer_json(raw)
-
-    json_ok = parsed is not None
-    schema_errors = errores_de_esquema(parsed, req.esquema) if json_ok else ["la respuesta no es JSON"]
     eval_s = (respuesta.eval_duration or 0) / 1e9
+
+    if req.mode == "libre":
+        evaluaciones = {
+            "prompt": evaluar(raw, req.esquema, req.expected, reparar=False),
+            "postproceso": evaluar(raw, req.esquema, req.expected, reparar=True),
+        }
+    else:
+        evaluaciones = {"restringido": evaluar(raw, req.esquema, req.expected, reparar=False)}
 
     return StructuredResult(
         raw=raw,
-        parsed=parsed,
-        json_ok=json_ok,
-        schema_ok=json_ok and not schema_errors,
-        schema_errors=schema_errors,
-        repairs=repairs,
-        accuracy=exactitud(req.expected, parsed) if req.expected is not None else None,
         latency_s=round(latencia, 2),
         output_tokens=respuesta.eval_count,
         tokens_per_second=round(respuesta.eval_count / eval_s, 1) if eval_s and respuesta.eval_count else None,
+        evaluaciones=evaluaciones,
     )
