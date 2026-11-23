@@ -1,17 +1,69 @@
-import { Bar, BarChart, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ArrowLeft, ArrowRight, GitBranch, MousePointerClick } from "lucide-react";
 import type { TokenLogprob } from "../../lib/api";
-import { alternativas, entropia, mostrarToken, pct, prob } from "../../lib/probs";
+import { num } from "../../lib/formato";
+import { alternativas, duda, entropia, mostrarToken, pct, prob } from "../../lib/probs";
+import { Teclas } from "../ui/Controles";
+import { Vacio } from "../ui/Vista";
 
-const CONTEXTO = 8; // tokens previos que se muestran para ubicar el token
+const CONTEXTO = 10; // tokens previos que se muestran para ubicar el token
 
 export type EstadoToken = "original" | "heredado" | "forzado" | "generado";
 
 const ETIQUETA_ESTADO: Record<EstadoToken, { texto: string; clase: string } | null> = {
   original: null,
-  heredado: { texto: "Heredado de la rama madre", clase: "bg-zinc-700/60 text-zinc-300" },
-  forzado: { texto: "Token forzado por vos", clase: "bg-amber-500/20 text-amber-300" },
-  generado: { texto: "Generado en esta rama", clase: "bg-emerald-500/15 text-emerald-300" },
+  heredado: { texto: "Heredado de la rama madre", clase: "tag" },
+  forzado: { texto: "Forzado por vos", clase: "tag tag--accent" },
+  generado: { texto: "Generado en esta rama", clase: "tag" },
 };
+
+/** Alternativas que se pueden forzar, en el orden en que se numeran (1…9). */
+export function alternativasForzables(t: TokenLogprob) {
+  return alternativas(t).filter((a) => !a.elegido);
+}
+
+/** Medidor de media luna: la probabilidad del token elegido. */
+function Medidor({ p }: { p: number }) {
+  const R = 58;
+  const L = Math.PI * R;
+  const cx = 72;
+  const cy = 72;
+  const color = p >= 0.5 ? "var(--accent)" : "var(--doubt)";
+  const arco = `M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`;
+  return (
+    <div className="relative h-[80px] w-[144px]">
+      <svg width="144" height="80" viewBox="0 0 144 80" aria-hidden>
+        <path d={arco} fill="none" stroke="var(--line-2)" strokeWidth="5" strokeLinecap="round" />
+        <path
+          d={arco}
+          fill="none"
+          stroke={color}
+          strokeWidth="5"
+          strokeLinecap="round"
+          strokeDasharray={`${Math.max(0.001, p * L)} ${L}`}
+          style={{ transition: "stroke-dasharray 200ms var(--ease)", filter: `drop-shadow(0 0 6px color-mix(in oklab, ${color} 45%, transparent))` }}
+        />
+        {[0.25, 0.5, 0.75].map((x) => {
+          const a = Math.PI * (1 - x);
+          return (
+            <line
+              key={x}
+              x1={cx + Math.cos(a) * (R + 6)}
+              y1={cy - Math.sin(a) * (R + 6)}
+              x2={cx + Math.cos(a) * (R + 10)}
+              y2={cy - Math.sin(a) * (R + 10)}
+              stroke="var(--muted)"
+              strokeWidth="1"
+            />
+          );
+        })}
+      </svg>
+      <div className="absolute inset-x-0 bottom-1 text-center">
+        <div className="num text-[20px] leading-none text-ink">{pct(p)}</div>
+        <div className="label mt-1">probabilidad</div>
+      </div>
+    </div>
+  );
+}
 
 export default function InspectorToken({
   tokens,
@@ -31,135 +83,140 @@ export default function InspectorToken({
 }) {
   if (!tokens || indice === null || !tokens[indice]) {
     return (
-      <aside className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-sm text-zinc-500">
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">Inspector de tokens</h3>
-        Hacé clic en cualquier token de una respuesta para ver qué otras opciones consideró el modelo en ese paso.
-      </aside>
+      <Vacio icono={<MousePointerClick />} titulo="Elegí un token de una respuesta">
+        <p>Vas a ver entre qué opciones dudaba el modelo en ese paso y podés forzar otra.</p>
+        <p className="mt-3 flex items-center justify-center gap-1.5">
+          <Teclas teclas={["←", "→"]} /> para recorrer
+        </p>
+      </Vacio>
     );
   }
 
   const t = tokens[indice];
   const p = prob(t.logprob);
-  const datos = alternativas(t).map((a) => ({ ...a, etiqueta: mostrarToken(a.token), porcentaje: +(a.p * 100).toFixed(2) }));
-  const sumaTop = datos.reduce((s, a) => s + a.p, 0);
+  const lista = alternativas(t);
+  const max = lista[0]?.p ?? 1;
+  const sumaTop = lista.reduce((s, a) => s + a.p, 0);
+  const forzables = lista.filter((a) => !a.elegido);
   const previos = tokens.slice(Math.max(0, indice - CONTEXTO), indice).map((x) => x.token).join("");
+  const bits = entropia(t);
 
   return (
-    <aside className="space-y-4 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-sm">
-      <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Inspector de tokens</h3>
-        <div className="flex items-center gap-1 text-xs text-zinc-400">
-          <button
-            onClick={() => onMover(Math.max(0, indice - 1))}
-            className="rounded border border-zinc-700 px-2 hover:bg-zinc-800"
-            aria-label="Token anterior"
-          >
-            ←
-          </button>
-          <span className="font-mono">
-            {indice + 1}/{tokens.length}
-          </span>
-          <button
-            onClick={() => onMover(Math.min(tokens.length - 1, indice + 1))}
-            className="rounded border border-zinc-700 px-2 hover:bg-zinc-800"
-            aria-label="Token siguiente"
-          >
-            →
-          </button>
-        </div>
-      </div>
-
-      {ETIQUETA_ESTADO[estado] && (
-        <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] ${ETIQUETA_ESTADO[estado]!.clase}`}>
-          {ETIQUETA_ESTADO[estado]!.texto}
+    <div className="space-y-4 p-4">
+      {/* Posición */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onMover(Math.max(0, indice - 1))}
+          className="btn btn--sm btn--icon"
+          aria-label="Token anterior"
+          data-tip="Token anterior  ←"
+        >
+          <ArrowLeft aria-hidden />
+        </button>
+        <span className="num text-label text-muted">
+          token <span className="text-ink">{indice + 1}</span> de {tokens.length}
         </span>
-      )}
-
-      <div className="rounded-lg bg-zinc-950/60 p-3 font-mono text-xs leading-relaxed text-zinc-400">
-        <span className="text-zinc-500">…</span>
-        {previos}
-        <span className="rounded bg-indigo-500/30 px-0.5 text-indigo-200">{t.token}</span>
+        <button
+          type="button"
+          onClick={() => onMover(Math.min(tokens.length - 1, indice + 1))}
+          className="btn btn--sm btn--icon"
+          aria-label="Token siguiente"
+          data-tip="Token siguiente  →"
+        >
+          <ArrowRight aria-hidden />
+        </button>
+        {ETIQUETA_ESTADO[estado] && (
+          <span className={`${ETIQUETA_ESTADO[estado]!.clase} ml-auto`}>{ETIQUETA_ESTADO[estado]!.texto}</span>
+        )}
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-lg bg-zinc-800/60 p-2">
-          <div className="text-[11px] text-zinc-400">Probabilidad</div>
-          <div className="text-lg font-semibold">{pct(p)}</div>
-        </div>
-        <div className="rounded-lg bg-zinc-800/60 p-2">
-          <div className="text-[11px] text-zinc-400">Logprob</div>
-          <div className="text-lg font-semibold">{t.logprob.toFixed(2)}</div>
-        </div>
-        <div className="rounded-lg bg-zinc-800/60 p-2" title="Entropía estimada con las alternativas mostradas">
-          <div className="text-[11px] text-zinc-400">Entropía</div>
-          <div className="text-lg font-semibold">{entropia(t).toFixed(2)} bits</div>
-        </div>
+      {/* Contexto */}
+      <div className="well mono overflow-hidden px-3 py-2.5 text-label leading-relaxed text-muted">
+        <span className="opacity-60">…</span>
+        <span className="whitespace-pre-wrap break-words">{previos}</span>
+        <span className="rounded-[3px] bg-accent px-1 py-px text-[var(--accent-ink)]">{mostrarToken(t.token)}</span>
       </div>
 
+      {/* Lecturas */}
+      <div className="grid grid-cols-[auto_1fr] items-center gap-4">
+        <Medidor p={p} />
+        <dl className="space-y-2.5">
+          <div className="flex items-baseline justify-between gap-2">
+            <dt className="label">Logprob</dt>
+            <dd className="num text-small text-ink">{num(t.logprob, 3)}</dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-2" data-tip="Entropía estimada con las alternativas mostradas" data-tip-pos="left">
+            <dt className="label">Entropía</dt>
+            <dd className="num text-small text-ink">{num(bits, 2)} bits</dd>
+          </div>
+          <div>
+            <div className="flex items-baseline justify-between gap-2">
+              <dt className="label">Duda</dt>
+              <dd className="num text-small text-doubt">{num(duda(t) * 100, 0)} %</dd>
+            </div>
+            <div className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-line-2">
+              <div className="h-full origin-left rounded-full bg-doubt" style={{ transform: `scaleX(${duda(t)})` }} />
+            </div>
+          </div>
+        </dl>
+      </div>
+
+      {/* Alternativas */}
       <div>
-        <h4 className="mb-1 text-xs text-zinc-400">Alternativas en este paso</h4>
-        <div style={{ height: Math.max(120, datos.length * 26 + 20) }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={datos} layout="vertical" margin={{ top: 0, right: 48, bottom: 0, left: 0 }}>
-              <XAxis type="number" domain={[0, 100]} hide />
-              <YAxis
-                type="category"
-                dataKey="etiqueta"
-                width={96}
-                tick={{ fill: "#d4d4d8", fontSize: 12, fontFamily: "ui-monospace, monospace" }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip
-                cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                contentStyle={{ background: "#18181b", border: "1px solid #3f3f46", fontSize: 12 }}
-                formatter={(v) => [`${v}%`, "Probabilidad"]}
-              />
-              <Bar dataKey="porcentaje" radius={[0, 4, 4, 0]} isAnimationActive={false}>
-                {datos.map((d) => (
-                  <Cell key={d.token} fill={d.elegido ? "#818cf8" : "#52525b"} />
-                ))}
-                <LabelList
-                  dataKey="porcentaje"
-                  position="right"
-                  formatter={(v) => `${v}%`}
-                  style={{ fill: "#a1a1aa", fontSize: 11 }}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="mb-2 flex items-baseline justify-between">
+          <h3 className="panel-title">Alternativas en este paso</h3>
+          <span className="num text-label text-muted">suman {pct(sumaTop, 0)}</span>
         </div>
-        <p className="mt-2 text-[11px] leading-snug text-zinc-500">
-          En violeta, el token que salió. Estas {datos.length} opciones suman {pct(sumaTop)}; el resto se reparte entre
-          los ~150.000 tokens del vocabulario.
+        <ol className="space-y-1">
+          {lista.map((a) => {
+            const n = forzables.indexOf(a) + 1;
+            const puede = !a.elegido && onBifurcar && !bloqueado;
+            return (
+              <li key={a.token}>
+                <div
+                  className="group grid grid-cols-[20px_minmax(0,7.5rem)_1fr_auto] items-center gap-2.5 rounded-md px-2 py-1.5"
+                  style={a.elegido ? { background: "var(--accent-soft)" } : undefined}
+                >
+                  <span className="num text-center text-label text-muted">{a.elegido ? "●" : n <= 9 ? n : ""}</span>
+                  <span className={`mono truncate text-label ${a.elegido ? "text-ink" : "text-ink-2"}`}>{mostrarToken(a.token)}</span>
+                  <span className="relative h-[6px] overflow-hidden rounded-full bg-line">
+                    <span
+                      className="absolute inset-y-0 left-0 origin-left rounded-full"
+                      style={{
+                        width: "100%",
+                        transform: `scaleX(${a.p / max})`,
+                        background: a.elegido ? "var(--accent)" : "color-mix(in oklab, var(--ink) 38%, transparent)",
+                        transition: "transform 200ms var(--ease)",
+                      }}
+                    />
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="num w-[4.2rem] text-right text-label text-ink-2">{pct(a.p)}</span>
+                    {!a.elegido && onBifurcar && (
+                      <button
+                        type="button"
+                        disabled={!puede}
+                        onClick={() => onBifurcar({ token: a.token, logprob: Math.log(a.p) })}
+                        className="btn btn--sm btn--icon opacity-60 group-hover:opacity-100 focus-visible:opacity-100"
+                        aria-label={`Forzar ${mostrarToken(a.token)} y seguir desde acá`}
+                        data-tip={n <= 9 ? `Forzar y seguir  ·  tecla ${n}` : "Forzar y seguir"}
+                        data-tip-pos="left"
+                      >
+                        <GitBranch aria-hidden />
+                      </button>
+                    )}
+                  </span>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+        <p className="hint mt-3">
+          El resto se reparte entre los ~150.000 tokens del vocabulario.
+          {onBifurcar && " Forzá una alternativa y el modelo sigue escribiendo desde ahí, en una rama nueva."}
         </p>
       </div>
-
-      {onBifurcar && (
-        <div className="space-y-1.5">
-          <h4 className="text-xs text-zinc-400">¿Y si hubiera elegido otro?</h4>
-          <p className="text-[11px] leading-snug text-zinc-500">
-            Forzá una alternativa y el modelo sigue escribiendo desde ahí, en una rama nueva.
-          </p>
-          <div className="space-y-1">
-            {datos
-              .filter((d) => !d.elegido)
-              .map((d) => (
-                <button
-                  key={d.token}
-                  disabled={bloqueado}
-                  onClick={() => onBifurcar({ token: d.token, logprob: Math.log(d.p) })}
-                  className="flex w-full items-center justify-between rounded-md border border-zinc-700 px-2 py-1 text-left text-xs hover:border-amber-400/60 hover:bg-amber-400/10 disabled:cursor-wait disabled:opacity-50"
-                >
-                  <span className="font-mono text-zinc-200">{mostrarToken(d.token)}</span>
-                  <span className="text-zinc-400">
-                    {pct(d.p)} <span className="ml-1 text-amber-300">seguir por acá ↳</span>
-                  </span>
-                </button>
-              ))}
-          </div>
-        </div>
-      )}
-    </aside>
+    </div>
   );
 }

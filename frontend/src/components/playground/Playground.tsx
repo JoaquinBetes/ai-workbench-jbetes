@@ -1,14 +1,22 @@
-import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, GitFork, RotateCcw, ScanSearch } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { EVENTO_ENFOCAR } from "../../App";
 import { streamContinue, type ChatMessage } from "../../lib/api";
-import { ID_RAIZ, nuevoId, textoDe, type Rama } from "../../lib/ramas";
+import { escribiendo, useComandos } from "../../lib/comandos";
 import { mostrarToken } from "../../lib/probs";
+import { ID_RAIZ, nuevoId, textoDe, type Rama } from "../../lib/ramas";
 import { useModelos } from "../../lib/useModelos";
 import { useStreamingChat, type Parametros } from "../../lib/useStreamingChat";
+import PromptLuminoso from "../ui/PromptLuminoso";
+import Segmentado from "../ui/Segmentado";
+import { EncabezadoVista, Vacio } from "../ui/Vista";
 import ArbolRamas from "./ArbolRamas";
 import Controles, { CONFIG_INICIAL, type Config } from "./Controles";
-import InspectorToken, { type EstadoToken } from "./InspectorToken";
+import ExploradorSampling from "./ExploradorSampling";
+import InspectorToken, { alternativasForzables, type EstadoToken } from "./InspectorToken";
 import MetricasRespuesta from "./MetricasRespuesta";
 import TextoTokens, { type ModoColor } from "./TextoTokens";
+import TrazaConfianza from "./TrazaConfianza";
 
 type Seleccion = { turno: number; rama: string; indice: number } | null;
 
@@ -16,10 +24,12 @@ type Seleccion = { turno: number; rama: string; indice: number } | null;
 type Contexto = { modelo: string; system: string };
 
 const MODOS: { valor: ModoColor; nombre: string; ayuda: string }[] = [
-  { valor: "probabilidad", nombre: "Probabilidad", ayuda: "Verde = token muy probable; rojo = poco probable" },
-  { valor: "incertidumbre", nombre: "Incertidumbre", ayuda: "Violeta = el modelo dudaba entre varias opciones parecidas" },
-  { valor: "ninguno", nombre: "Sin color", ayuda: "Texto plano (igual se puede hacer clic)" },
+  { valor: "duda", nombre: "Duda", ayuda: "Subrayado ámbar donde el modelo dudaba entre varias opciones" },
+  { valor: "probabilidad", nombre: "Probabilidad", ayuda: "Fondo ámbar cuanto menos probable fue el token elegido" },
+  { valor: "ninguno", nombre: "Sin marcas", ayuda: "Texto plano (igual se puede hacer clic)" },
 ];
+
+const EJEMPLOS = ["El mejor asado se hace con", "¿Capital de Australia?", "Un chiste de programadores"];
 
 const parametrosDe = (c: Config): Parametros => ({
   temperature: c.temperature,
@@ -31,10 +41,12 @@ const parametrosDe = (c: Config): Parametros => ({
   max_tokens: c.max_tokens,
 });
 
-export default function Playground() {
+const dosCifras = (n: number) => String(n).padStart(2, "0");
+
+export default function Playground({ activa = true }: { activa?: boolean }) {
   const { modelos, preferido } = useModelos();
   const [config, setConfig] = useState<Config>(CONFIG_INICIAL);
-  const [modo, setModo] = useState<ModoColor>("probabilidad");
+  const [modo, setModo] = useState<ModoColor>("duda");
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
   const [entrada, setEntrada] = useState("");
   const [panel, setPanel] = useState<"inspector" | "ramas">("inspector");
@@ -45,14 +57,22 @@ export default function Playground() {
   const [ramasExtra, setRamasExtra] = useState<Record<number, Rama[]>>({});
   const [ramaActiva, setRamaActiva] = useState<Record<number, string>>({});
   const [contextos, setContextos] = useState<Record<number, Contexto>>({});
-  const fin = useRef<HTMLDivElement>(null);
+  const scroll = useRef<HTMLDivElement>(null);
+  const prompt = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (preferido) setConfig((c) => (c.modelo ? c : { ...c, modelo: preferido }));
   }, [preferido]);
 
+  // Mientras llega texto, seguir el final si ya estabas cerca del final.
+  useLayoutEffect(() => {
+    const el = scroll.current;
+    if (!el || !turnos.length) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 160) el.scrollTop = el.scrollHeight;
+  });
   useEffect(() => {
-    fin.current?.scrollIntoView({ behavior: "smooth" });
+    const el = scroll.current;
+    if (el && turnos.length) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [turnos.length]);
 
   // --- Ramas -----------------------------------------------------------------
@@ -146,6 +166,7 @@ export default function Playground() {
     setRamaActiva({});
     setContextos({});
     setTurnoVista(null);
+    prompt.current?.focus();
   }
 
   // --- Inspector -------------------------------------------------------------
@@ -156,213 +177,322 @@ export default function Playground() {
     const c = ramaSeleccionada.corte;
     estadoToken = seleccion.indice < c ? "heredado" : seleccion.indice === c ? "forzado" : "generado";
   }
+  const bloqueado = generando || !!ramaSeleccionada?.generando;
+  const forzarAlternativa =
+    seleccion && ramaSeleccionada
+      ? (alt: { token: string; logprob: number }) => {
+          setPanel("inspector");
+          bifurcar(seleccion.turno, ramaSeleccionada, seleccion.indice, alt);
+        }
+      : undefined;
 
   // Turno cuyo árbol se muestra: el seleccionado o, si no hay, la última respuesta.
   const ultimoAsistente = turnos.map((t, i) => (t.role === "assistant" ? i : -1)).filter((i) => i >= 0).pop();
   const turnoArbol = seleccion?.turno ?? turnoVista ?? ultimoAsistente;
   const ramasArbol = turnoArbol !== undefined ? ramasDe(turnoArbol) : [];
 
+  // --- Teclado y comandos ----------------------------------------------------
+
+  const estadoTeclas = useRef({ seleccion, ramaSeleccionada, generando, bloqueado, forzarAlternativa, detener });
+  estadoTeclas.current = { seleccion, ramaSeleccionada, generando, bloqueado, forzarAlternativa, detener };
+
+  useEffect(() => {
+    if (!activa) return;
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || escribiendo(e) || document.querySelector(".overlay")) return;
+      const s = estadoTeclas.current;
+      if (e.key === "Escape") {
+        if (s.generando) s.detener();
+        else setSeleccion(null);
+        return;
+      }
+      if (!s.seleccion || !s.ramaSeleccionada) return;
+      const total = s.ramaSeleccionada.tokens.length;
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        const d = e.key === "ArrowLeft" ? -1 : 1;
+        setSeleccion({ ...s.seleccion, indice: Math.min(total - 1, Math.max(0, s.seleccion.indice + d)) });
+      } else if (/^[1-9]$/.test(e.key) && s.forzarAlternativa && !s.bloqueado) {
+        const t = s.ramaSeleccionada.tokens[s.seleccion.indice];
+        const alt = t && alternativasForzables(t)[Number(e.key) - 1];
+        if (alt) {
+          e.preventDefault();
+          s.forzarAlternativa({ token: alt.token, logprob: Math.log(alt.p) });
+        }
+      }
+    };
+    const enfocar = (e: Event) => (e as CustomEvent).detail === "playground" && prompt.current?.focus();
+    window.addEventListener("keydown", alTeclear);
+    window.addEventListener(EVENTO_ENFOCAR, enfocar);
+    return () => {
+      window.removeEventListener("keydown", alTeclear);
+      window.removeEventListener(EVENTO_ENFOCAR, enfocar);
+    };
+  }, [activa]);
+
+  useComandos(
+    "playground",
+    activa
+      ? [
+          { id: "pg-nueva", titulo: "Nueva conversación", grupo: "Playground", claves: "borrar reiniciar", ejecutar: nuevaConversacion },
+          ...MODOS.map((m) => ({
+            id: `pg-modo-${m.valor}`,
+            titulo: `Marcar tokens: ${m.nombre.toLowerCase()}`,
+            grupo: "Playground",
+            claves: "color subrayado incertidumbre",
+            ejecutar: () => setModo(m.valor),
+          })),
+          { id: "pg-ramas", titulo: "Ver el árbol de ramas", grupo: "Playground", ejecutar: () => setPanel("ramas") },
+          { id: "pg-inspector", titulo: "Ver el inspector de tokens", grupo: "Playground", ejecutar: () => setPanel("inspector") },
+          ...(generando ? [{ id: "pg-detener", titulo: "Detener la generación", grupo: "Playground", atajo: ["Esc"], ejecutar: detener }] : []),
+        ]
+      : [],
+  );
+
+  // --- Vista -----------------------------------------------------------------
+
   return (
-    <div className="grid h-full min-h-0 grid-cols-[17rem_minmax(0,1fr)_22rem] gap-4">
-      <Controles config={config} setConfig={setConfig} modelos={modelos} />
-
-      <section className="flex min-h-0 flex-col gap-3">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-zinc-400">Colorear por:</span>
-          {MODOS.map((m) => (
-            <button
-              key={m.valor}
-              title={m.ayuda}
-              onClick={() => setModo(m.valor)}
-              className={`rounded-md px-2 py-1 ${modo === m.valor ? "bg-zinc-700 text-white" : "text-zinc-400 hover:bg-zinc-800"}`}
-            >
-              {m.nombre}
-            </button>
-          ))}
-          <button
-            onClick={nuevaConversacion}
-            className="ml-auto rounded-md border border-zinc-700 px-3 py-1 text-zinc-300 hover:bg-zinc-800"
-          >
-            Nueva conversación
-          </button>
-        </div>
-
-        <div className="flex-1 space-y-4 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-          {turnos.length === 0 && (
-            <div className="mx-auto max-w-md space-y-2 pt-10 text-center text-sm text-zinc-500">
-              <p className="text-base text-zinc-300">Playground de sampling</p>
-              <p>
-                Ajustá los parámetros a la izquierda, preguntá algo y hacé clic en cualquier token de la respuesta para ver
-                entre qué opciones dudaba el modelo.
-              </p>
-              <p className="text-xs">
-                Desde el inspector podés forzar una alternativa y ver cómo sigue la respuesta en una rama nueva.
-              </p>
-            </div>
-          )}
-
-          {turnos.map((t, i) => {
-            if (t.role === "user") {
-              return (
-                <div key={i} className="flex justify-end">
-                  <div className="max-w-[85%] whitespace-pre-wrap rounded-xl bg-indigo-600/80 px-4 py-2">{t.content}</div>
-                </div>
-              );
-            }
-            const ramas = ramasDe(i);
-            const rama = ramaDe(i);
-            const pos = ramas.findIndex((r) => r.id === rama.id);
-            const cambiarRama = (delta: number) => {
-              const otra = ramas[(pos + delta + ramas.length) % ramas.length];
-              setRamaActiva((prev) => ({ ...prev, [i]: otra.id }));
-              setSeleccion(null);
-            };
-            return (
-              <div key={i} className="rounded-xl bg-zinc-800/70 px-4 py-3">
-                {ramas.length > 1 && (
-                  <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-zinc-700 pb-2 text-xs text-zinc-400">
-                    <button onClick={() => cambiarRama(-1)} className="rounded border border-zinc-700 px-2 hover:bg-zinc-700">
-                      ‹
-                    </button>
-                    <span className="font-medium text-zinc-200">
-                      {rama.corte === null ? "Respuesta original" : `Rama ${pos}`}
-                    </span>
-                    <span>
-                      ({pos + 1} de {ramas.length})
-                    </span>
-                    <button onClick={() => cambiarRama(1)} className="rounded border border-zinc-700 px-2 hover:bg-zinc-700">
-                      ›
-                    </button>
-                    {rama.corte !== null && (
-                      <span>
-                        · forzado <span className="font-mono text-amber-300">{mostrarToken(rama.tokens[rama.corte].token)}</span>{" "}
-                        en el token #{rama.corte + 1}
-                      </span>
-                    )}
-                    {rama.metodo && (
-                      <span className="ml-auto rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px]" title="Cómo se generó la continuación">
-                        {rama.metodo}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {t.thinking && (
-                  <details className="mb-2 rounded-lg bg-zinc-900/60 px-3 py-2 text-xs text-zinc-400">
-                    <summary className="cursor-pointer select-none">Razonamiento del modelo</summary>
-                    <p className="mt-2 whitespace-pre-wrap">{t.thinking}</p>
-                  </details>
-                )}
-
-                {rama.tokens.length ? (
-                  <TextoTokens
-                    tokens={rama.tokens}
-                    modo={modo}
-                    corte={rama.corte}
-                    seleccionado={seleccion?.turno === i && seleccion.rama === rama.id ? seleccion.indice : null}
-                    onSeleccionar={(indice) => setSeleccion({ turno: i, rama: rama.id, indice })}
-                  />
-                ) : (
-                  <span className="whitespace-pre-wrap">{t.content || (rama.generando ? "…" : "")}</span>
-                )}
-                {rama.generando && rama.corte !== null && <span className="ml-1 animate-pulse text-zinc-500">▍</span>}
-                {rama.error && <p className="mt-2 text-sm text-rose-400">{rama.error}</p>}
-
-                {rama.tokens.length > 0 && !rama.generando && (
-                  <MetricasRespuesta
-                    tokens={rama.tokens}
-                    stats={rama.stats}
-                    desde={rama.corte === null ? 0 : rama.corte + 1}
-                    onSeleccionar={(indice) => setSeleccion({ turno: i, rama: rama.id, indice })}
-                  />
-                )}
-              </div>
-            );
-          })}
-          <div ref={fin} />
-        </div>
-
-        {error && <p className="text-sm text-rose-400">{error}</p>}
-
-        <div className="flex gap-2">
-          <textarea
-            value={entrada}
-            onChange={(e) => setEntrada(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                mandar();
-              }
-            }}
-            rows={2}
-            placeholder="Escribí tu mensaje (Enter para enviar)"
-            className="flex-1 resize-none rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 outline-none focus:border-indigo-500"
-          />
-          {generando ? (
-            <button onClick={detener} className="rounded-xl bg-rose-600 px-5 font-medium hover:bg-rose-500">
-              Detener
-            </button>
-          ) : (
-            <button onClick={mandar} className="rounded-xl bg-indigo-600 px-5 font-medium hover:bg-indigo-500">
-              Enviar
-            </button>
-          )}
-        </div>
-      </section>
-
-      <div className="flex min-h-0 flex-col gap-2">
-        <div className="flex gap-1 text-xs">
-          {(["inspector", "ramas"] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPanel(p)}
-              className={`flex-1 rounded-md px-3 py-1.5 ${panel === p ? "bg-zinc-800 text-white" : "text-zinc-400 hover:bg-zinc-900"}`}
-            >
-              {p === "inspector" ? "Inspector" : `Ramas${ramasArbol.length > 1 ? ` (${ramasArbol.length - 1})` : ""}`}
-            </button>
-          ))}
-        </div>
-
-        {panel === "inspector" ? (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <InspectorToken
-              tokens={ramaSeleccionada?.tokens ?? null}
-              indice={seleccion?.indice ?? null}
-              onMover={(indice) => seleccion && setSeleccion({ ...seleccion, indice })}
-              estado={estadoToken}
-              bloqueado={generando || !!ramaSeleccionada?.generando}
-              onBifurcar={
-                seleccion && ramaSeleccionada
-                  ? (alt) => bifurcar(seleccion.turno, ramaSeleccionada, seleccion.indice, alt)
-                  : undefined
-              }
+    <div className="flex h-full flex-col px-3 pb-3">
+      <EncabezadoVista
+        capitulo="Cap. 2"
+        titulo="Playground de sampling"
+        descripcion="Cada token de la respuesta se puede inspeccionar y bifurcar."
+        acciones={
+          <>
+            <Segmentado
+              etiqueta="Cómo marcar los tokens"
+              sm
+              valor={modo}
+              onChange={setModo}
+              opciones={MODOS.map((m) => ({ valor: m.valor, etiqueta: m.nombre, tip: m.ayuda }))}
             />
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-sm">
-            {turnoArbol === undefined ? (
-              <p className="text-zinc-500">Todavía no hay respuestas. Cuando forces una alternativa desde el inspector, acá vas a ver el árbol.</p>
+            <button type="button" onClick={nuevaConversacion} className="btn btn--sm" disabled={!turnos.length}>
+              <RotateCcw aria-hidden /> Nueva conversación
+            </button>
+          </>
+        }
+      />
+
+      <div className="grid min-h-0 flex-1 grid-cols-[17.5rem_minmax(0,1fr)_23rem] gap-3">
+        <Controles config={config} setConfig={setConfig} modelos={modelos} />
+
+        <section className="flex min-h-0 flex-col" aria-label="Conversación">
+          <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto px-2 pb-6">
+            {turnos.length === 0 ? (
+              <ExploradorSampling temperatura={config.temperature} topK={config.top_k} topP={config.top_p} />
             ) : (
-              <>
-                <p className="text-[11px] leading-snug text-zinc-500">
-                  Cada nodo es una versión de la respuesta. Clic para verla: la rama activa es la que sigue la conversación.
-                  PPL = perplejidad de la parte nueva.
-                </p>
-                <div className="min-h-0 flex-1">
-                  <ArbolRamas
-                    ramas={ramasArbol}
-                    activa={ramaActiva[turnoArbol] ?? ID_RAIZ}
-                    onElegir={(id) => {
-                      setRamaActiva((prev) => ({ ...prev, [turnoArbol]: id }));
-                      setTurnoVista(turnoArbol);
-                      setSeleccion(null);
-                    }}
-                  />
-                </div>
-              </>
+              <div className="mx-auto max-w-[780px] space-y-5 pt-2">
+                {turnos.map((t, i) => {
+                  const par = dosCifras(Math.floor(i / 2) + 1);
+                  if (t.role === "user") {
+                    return (
+                      <div key={i} className="rise-in grid grid-cols-[5.5rem_1fr] gap-3 px-1">
+                        <span className="mono pt-0.5 text-label text-muted">entrada {par}</span>
+                        <p className="whitespace-pre-wrap text-body text-ink">{t.content}</p>
+                      </div>
+                    );
+                  }
+                  const ramas = ramasDe(i);
+                  const rama = ramaDe(i);
+                  const pos = ramas.findIndex((r) => r.id === rama.id);
+                  const cambiarRama = (delta: number) => {
+                    const otra = ramas[(pos + delta + ramas.length) % ramas.length];
+                    setRamaActiva((prev) => ({ ...prev, [i]: otra.id }));
+                    setSeleccion(null);
+                  };
+                  const sel = seleccion?.turno === i && seleccion.rama === rama.id ? seleccion.indice : null;
+                  const desde = rama.corte === null ? 0 : rama.corte + 1;
+                  return (
+                    <article key={i} className="panel rise-in overflow-hidden">
+                      <header className="panel-head gap-3">
+                        <span className="mono text-label text-muted">salida {par}</span>
+                        <span className="mono truncate text-label text-ink-2">{contextos[i]?.modelo ?? config.modelo}</span>
+                        {ramas.length > 1 && (
+                          <span className="flex items-center gap-1 rounded-md border border-line bg-sunken p-0.5">
+                            <button type="button" onClick={() => cambiarRama(-1)} className="btn btn--sm btn--icon btn--quiet h-6 w-6" aria-label="Rama anterior">
+                              <ChevronLeft aria-hidden />
+                            </button>
+                            <span className="num px-1 text-label text-ink">
+                              {rama.corte === null ? "original" : `rama ${pos}`}
+                              <span className="text-muted"> · {pos + 1}/{ramas.length}</span>
+                            </span>
+                            <button type="button" onClick={() => cambiarRama(1)} className="btn btn--sm btn--icon btn--quiet h-6 w-6" aria-label="Rama siguiente">
+                              <ChevronRight aria-hidden />
+                            </button>
+                          </span>
+                        )}
+                        {rama.corte !== null && (
+                          <span className="hidden items-center gap-1.5 text-label text-muted lg:flex">
+                            forzó
+                            <span className="mono rounded-[3px] bg-accent px-1 text-[var(--accent-ink)]">
+                              {mostrarToken(rama.tokens[rama.corte].token)}
+                            </span>
+                            <span className="num">en #{rama.corte + 1}</span>
+                          </span>
+                        )}
+                        <span className="ml-auto flex items-center gap-2">
+                          {rama.metodo && (
+                            <span className="tag" data-tip="Cómo siguió el backend la respuesta desde el prefijo" data-tip-pos="left">
+                              {rama.metodo}
+                            </span>
+                          )}
+                          {rama.generando ? (
+                            <span className="flex items-center gap-2 text-label text-accent">
+                              <span className="level" aria-hidden>
+                                <i />
+                                <i />
+                                <i />
+                              </span>
+                              <span className="num">{rama.tokens.length} tokens</span>
+                            </span>
+                          ) : (
+                            ramas.length > 1 && (
+                              <button
+                                type="button"
+                                className="btn btn--sm btn--quiet"
+                                onClick={() => {
+                                  setTurnoVista(i);
+                                  setPanel("ramas");
+                                }}
+                              >
+                                <GitFork aria-hidden /> Árbol
+                              </button>
+                            )
+                          )}
+                        </span>
+                      </header>
+
+                      <div className="@container space-y-4 px-5 py-4">
+                        {t.thinking && (
+                          <details className="well group px-3 py-2">
+                            <summary className="label cursor-pointer select-none list-none">
+                              <span className="inline-block transition-transform group-open:rotate-90">›</span> Razonamiento del modelo
+                              <span className="num ml-2 text-muted">{t.thinking.length} caracteres</span>
+                            </summary>
+                            <p className="mt-2 whitespace-pre-wrap text-label leading-relaxed text-muted">{t.thinking}</p>
+                          </details>
+                        )}
+
+                        {rama.tokens.length ? (
+                          <TextoTokens
+                            tokens={rama.tokens}
+                            modo={modo}
+                            corte={rama.corte}
+                            cursor={rama.generando}
+                            seleccionado={sel}
+                            onSeleccionar={(indice) => setSeleccion({ turno: i, rama: rama.id, indice })}
+                          />
+                        ) : (
+                          <div className="tokens">
+                            {t.content}
+                            {rama.generando && (
+                              <span className="flex items-center gap-2 text-label text-muted">
+                                <span className="spin" aria-hidden /> Cargando el modelo y leyendo el prompt…
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {rama.error && <p className="tag tag--danger h-auto py-1">{rama.error}</p>}
+
+                        {rama.tokens.length > 1 && (
+                          <TrazaConfianza
+                            tokens={rama.tokens}
+                            desde={desde}
+                            seleccionado={sel}
+                            onSeleccionar={(indice) => setSeleccion({ turno: i, rama: rama.id, indice })}
+                          />
+                        )}
+                        {rama.tokens.length > 0 && !rama.generando && (
+                          <MetricasRespuesta
+                            tokens={rama.tokens}
+                            stats={rama.stats}
+                            desde={desde}
+                            onSeleccionar={(indice) => setSeleccion({ turno: i, rama: rama.id, indice })}
+                          />
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
             )}
           </div>
-        )}
+
+          {error && <p className="tag tag--danger mx-auto mb-3 h-auto max-w-[780px] py-1">{error}</p>}
+
+          <div className="enter mx-auto w-full max-w-[804px] px-3 pt-2" style={{ ["--delay" as string]: "200ms" }}>
+            <PromptLuminoso
+              entradaRef={prompt}
+              valor={entrada}
+              onCambio={setEntrada}
+              onEnviar={mandar}
+              onDetener={detener}
+              generando={generando}
+              deshabilitado={!config.modelo}
+              etiqueta="Prompt para el modelo"
+              placeholder="Preguntale algo al modelo y después hacé clic en cualquier token de la respuesta"
+              chip={config.modelo || "sin modelo"}
+              ejemplos={turnos.length ? [] : EJEMPLOS}
+            />
+          </div>
+        </section>
+
+        <aside className="panel enter flex min-h-0 flex-col" style={{ ["--delay" as string]: "120ms" }} aria-label="Inspector y ramas">
+          <div className="border-b border-line p-2">
+            <Segmentado
+              etiqueta="Panel lateral"
+              block
+              valor={panel}
+              onChange={setPanel}
+              opciones={[
+                { valor: "inspector", etiqueta: "Inspector", icono: <ScanSearch aria-hidden /> },
+                {
+                  valor: "ramas",
+                  etiqueta: `Ramas${ramasArbol.length > 1 ? ` · ${ramasArbol.length - 1}` : ""}`,
+                  icono: <GitFork aria-hidden />,
+                },
+              ]}
+            />
+          </div>
+
+          {panel === "inspector" ? (
+            <div key="inspector" className="fade-in min-h-0 flex-1 overflow-y-auto">
+              <InspectorToken
+                tokens={ramaSeleccionada?.tokens ?? null}
+                indice={seleccion?.indice ?? null}
+                onMover={(indice) => seleccion && setSeleccion({ ...seleccion, indice })}
+                estado={estadoToken}
+                bloqueado={bloqueado}
+                onBifurcar={forzarAlternativa}
+              />
+            </div>
+          ) : (
+            <div key="ramas" className="fade-in flex min-h-0 flex-1 flex-col">
+              {turnoArbol === undefined || ramasArbol.length < 2 ? (
+                <Vacio icono={<GitFork />} titulo="Todavía no hay ramas">
+                  Elegí un token, forzá una alternativa desde el inspector y acá vas a ver el árbol de versiones.
+                </Vacio>
+              ) : (
+                <>
+                  <p className="hint border-b border-line px-4 py-2.5">
+                    Cada nodo es una versión de la salida {dosCifras(Math.floor(turnoArbol / 2) + 1)}. La rama activa es la que sigue la conversación.
+                  </p>
+                  <div className="min-h-0 flex-1">
+                    <ArbolRamas
+                      ramas={ramasArbol}
+                      activa={ramaActiva[turnoArbol] ?? ID_RAIZ}
+                      onElegir={(id) => {
+                        setRamaActiva((prev) => ({ ...prev, [turnoArbol]: id }));
+                        setTurnoVista(turnoArbol);
+                        setSeleccion(null);
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </aside>
       </div>
     </div>
   );
