@@ -24,6 +24,8 @@ export type Stats = {
   output_tokens: number | null;
   tokens_per_second: number | null;
   time_to_first_token_s: number | null;
+  /** Tiempo que tardó Ollama en cargar el modelo en la GPU (≈0 si ya estaba cargado). */
+  load_s?: number | null;
   total_s: number | null;
 };
 

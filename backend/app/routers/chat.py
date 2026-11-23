@@ -70,6 +70,7 @@ def _stats(chunk) -> dict:
         "output_tokens": chunk.eval_count,
         "tokens_per_second": round(chunk.eval_count / eval_s, 1) if eval_s and chunk.eval_count else None,
         "time_to_first_token_s": round(((chunk.load_duration or 0) + (chunk.prompt_eval_duration or 0)) / 1e9, 3),
+        "load_s": round((chunk.load_duration or 0) / 1e9, 2),
         "total_s": round((chunk.total_duration or 0) / 1e9, 2),
     }
 
