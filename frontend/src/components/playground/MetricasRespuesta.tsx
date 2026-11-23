@@ -1,20 +1,37 @@
 import type { Stats, TokenLogprob } from "../../lib/api";
-import { metricas, mostrarToken, pct } from "../../lib/probs";
+import { num, segundos } from "../../lib/formato";
+import { metricas, mostrarToken, pct, prob } from "../../lib/probs";
 
-function Tarjeta({ titulo, valor, ayuda, onClick }: { titulo: string; valor: string; ayuda: string; onClick?: () => void }) {
+function Celda({
+  etiqueta,
+  valor,
+  tip,
+  tono,
+  onClick,
+}: {
+  etiqueta: string;
+  valor: string;
+  tip: string;
+  tono?: "doubt";
+  onClick?: () => void;
+}) {
   const Comp = onClick ? "button" : "div";
   return (
     <Comp
       onClick={onClick}
-      title={ayuda}
-      className={`rounded-lg bg-zinc-800/60 px-3 py-2 text-left ${onClick ? "hover:bg-zinc-700/60" : ""}`}
+      data-tip={tip}
+      data-tip-pos="top"
+      className={`min-w-0 border-l border-t border-line px-3 py-2 text-left [&:nth-child(3n+1)]:border-l-0 [&:nth-child(-n+3)]:border-t-0 @4xl:border-t-0 @4xl:[&:nth-child(3n+1)]:border-l @4xl:first:border-l-0 ${
+        onClick ? "transition-colors hover:bg-raised" : ""
+      }`}
     >
-      <div className="text-[11px] text-zinc-400">{titulo}</div>
-      <div className="truncate font-semibold">{valor}</div>
+      <div className="label truncate">{etiqueta}</div>
+      <div className={`num mt-0.5 truncate text-small ${tono === "doubt" ? "text-doubt" : "text-ink"}`}>{valor}</div>
     </Comp>
   );
 }
 
+/** Fila de lecturas debajo de cada respuesta: rendimiento y certeza. */
 export default function MetricasRespuesta({
   tokens,
   stats,
@@ -33,39 +50,31 @@ export default function MetricasRespuesta({
   const dudoso = propios[m.indiceMasDudoso];
 
   return (
-    <>
-    {desde > 0 && (
-      <p className="mt-3 text-[11px] text-zinc-500">Métricas de la parte nueva de esta rama (después del token forzado).</p>
-    )}
-    <div className="mt-3 grid grid-cols-2 gap-2 border-t border-zinc-700 pt-3 text-sm sm:grid-cols-3 lg:grid-cols-6">
-      <Tarjeta titulo="Tokens" valor={String(m.tokens)} ayuda="Cantidad de tokens generados" />
-      <Tarjeta
-        titulo="Velocidad"
-        valor={stats?.tokens_per_second ? `${stats.tokens_per_second} tok/s` : "—"}
-        ayuda="Tokens generados por segundo (fase de decode)"
+    <div className="well grid grid-cols-3 overflow-hidden @4xl:grid-cols-[repeat(5,minmax(0,1fr))_minmax(0,1.5fr)]">
+      <Celda etiqueta={desde > 0 ? "Tokens nuevos" : "Tokens"} valor={String(m.tokens)} tip="Cantidad de tokens generados" />
+      <Celda
+        etiqueta="Velocidad"
+        valor={stats?.tokens_per_second ? `${num(stats.tokens_per_second, 1)} tok/s` : "—"}
+        tip="Tokens por segundo en la fase de decode"
       />
-      <Tarjeta
-        titulo="Primer token"
-        valor={stats?.time_to_first_token_s != null ? `${stats.time_to_first_token_s} s` : "—"}
-        ayuda="Carga del modelo + lectura del prompt (prefill)"
+      <Celda
+        etiqueta="Primer token"
+        valor={segundos(stats?.time_to_first_token_s)}
+        tip="Carga del modelo + lectura del prompt (prefill)"
       />
-      <Tarjeta
-        titulo="Confianza media"
-        valor={pct(m.confianzaPromedio)}
-        ayuda="Promedio de la probabilidad de cada token elegido"
+      <Celda etiqueta="Confianza" valor={pct(m.confianzaPromedio)} tip="Probabilidad promedio de cada token elegido" />
+      <Celda
+        etiqueta="Perplejidad"
+        valor={num(m.perplejidad, 2)}
+        tip="exp(−promedio de logprobs): entre cuántas opciones dudó, en promedio. 1 = ninguna duda"
       />
-      <Tarjeta
-        titulo="Perplejidad"
-        valor={m.perplejidad.toFixed(2)}
-        ayuda="exp(-promedio de logprobs): entre cuántas opciones dudó el modelo, en promedio. 1 = ninguna duda."
-      />
-      <Tarjeta
-        titulo="Más dudoso"
-        valor={`${mostrarToken(dudoso.token)} · ${pct(Math.exp(dudoso.logprob))}`}
-        ayuda="El token elegido con menor probabilidad. Clic para inspeccionarlo."
+      <Celda
+        etiqueta="Más dudoso"
+        valor={`${mostrarToken(dudoso.token)}  ${pct(prob(dudoso.logprob), 0)}`}
+        tip="El token elegido con menor probabilidad. Clic para inspeccionarlo"
+        tono="doubt"
         onClick={() => onSeleccionar(desde + m.indiceMasDudoso)}
       />
     </div>
-    </>
   );
 }

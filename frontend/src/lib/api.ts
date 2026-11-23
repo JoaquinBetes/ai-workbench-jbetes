@@ -1,4 +1,5 @@
 // Cliente de la API del backend (FastAPI).
+import { telemetria } from "./telemetria";
 
 export type ModelInfo = {
   name: string;
@@ -84,20 +85,32 @@ async function* streamSSE(url: string, body: unknown, signal?: AbortSignal): Asy
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  // Cada generación se reporta a la telemetría (barra de estado en vivo).
+  const modelo = (body as { model?: string }).model ?? "?";
+  const id = telemetria.iniciar(modelo);
+  let stats: Stats | null = null;
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
 
-    // Cada evento SSE termina con una línea en blanco.
-    let corte: number;
-    while ((corte = buffer.indexOf("\n\n")) >= 0) {
-      const bloque = buffer.slice(0, corte);
-      buffer = buffer.slice(corte + 2);
-      const linea = bloque.split("\n").find((l) => l.startsWith("data: "));
-      if (linea) yield JSON.parse(linea.slice(6)) as ChatEvent;
+      // Cada evento SSE termina con una línea en blanco.
+      let corte: number;
+      while ((corte = buffer.indexOf("\n\n")) >= 0) {
+        const bloque = buffer.slice(0, corte);
+        buffer = buffer.slice(corte + 2);
+        const linea = bloque.split("\n").find((l) => l.startsWith("data: "));
+        if (!linea) continue;
+        const ev = JSON.parse(linea.slice(6)) as ChatEvent;
+        if (ev.type === "token") telemetria.token(id, Math.max(1, ev.logprobs.length));
+        else if (ev.type === "done") stats = ev.stats;
+        yield ev;
+      }
     }
+  } finally {
+    telemetria.terminar(id, stats);
   }
 }
 
@@ -145,15 +158,25 @@ export async function muestraEstructurada(
   body: PedidoEstructurado,
   signal?: AbortSignal,
 ): Promise<ResultadoEstructurado> {
-  const res = await fetch("/api/structured/sample", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal,
-  });
-  if (!res.ok) {
-    const detalle = await res.json().catch(() => null);
-    throw new Error(typeof detalle?.detail === "string" ? detalle.detail : `HTTP ${res.status}`);
+  const id = telemetria.iniciar(body.model);
+  let resultado: ResultadoEstructurado | null = null;
+  try {
+    const res = await fetch("/api/structured/sample", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal,
+    });
+    if (!res.ok) {
+      const detalle = await res.json().catch(() => null);
+      throw new Error(typeof detalle?.detail === "string" ? detalle.detail : `HTTP ${res.status}`);
+    }
+    resultado = (await res.json()) as ResultadoEstructurado;
+    return resultado;
+  } finally {
+    telemetria.terminar(
+      id,
+      resultado && { output_tokens: resultado.output_tokens, tokens_per_second: resultado.tokens_per_second },
+    );
   }
-  return res.json();
 }

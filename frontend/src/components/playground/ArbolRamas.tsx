@@ -1,14 +1,15 @@
 import { Background, Handle, Position, ReactFlow, type Edge, type Node, type NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useMemo } from "react";
+import { num } from "../../lib/formato";
 import { metricas, mostrarToken } from "../../lib/probs";
 import { ID_RAIZ, resumenNuevo, type Rama } from "../../lib/ramas";
 
-// Layout tipo "árbol de carpetas": cada nivel se corre un poco a la derecha y
-// cada rama ocupa una fila. Así entra bien en un panel angosto.
-const ANCHO = 230;
-const SANGRIA = 28;
-const SEP_Y = 92;
+// Layout tipo "árbol de carpetas": cada nivel se corre a la derecha y cada rama
+// ocupa una fila. Así entra bien en un panel angosto.
+const ANCHO = 268;
+const SANGRIA = 26;
+const SEP_Y = 104;
 
 type DatosNodo = {
   rama: Rama;
@@ -22,27 +23,31 @@ function NodoRama({ data }: NodeProps<Node<DatosNodo>>) {
   return (
     <div
       style={{ width: ANCHO }}
-      className={`cursor-pointer rounded-lg border px-3 py-2 text-left text-xs shadow-sm transition-colors ${
-        activa ? "border-indigo-400 bg-indigo-500/15" : "border-zinc-700 bg-zinc-900 hover:border-zinc-500"
+      className={`relative cursor-pointer overflow-hidden rounded-lg border px-3 py-2.5 text-left transition-colors ${
+        activa ? "border-[var(--accent-line)] bg-[var(--raised)]" : "border-line bg-panel hover:border-line-2"
       }`}
     >
-      <Handle type="target" position={Position.Left} className="!border-0 !bg-zinc-500" />
+      {activa && <span className="absolute inset-y-0 left-0 w-[3px] bg-accent" aria-hidden />}
+      <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5 !border-0 !bg-[var(--line-2)]" />
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="font-medium text-zinc-100">{titulo}</span>
+        <span className="text-label font-medium text-ink">{titulo}</span>
         {rama.generando ? (
-          <span className="animate-pulse text-[10px] text-amber-300">generando…</span>
+          <span className="flex items-center gap-1.5 text-label text-accent">
+            <span className="spin" aria-hidden /> generando
+          </span>
         ) : (
-          perplejidad !== null && <span className="text-[10px] text-zinc-400">PPL {perplejidad.toFixed(2)}</span>
+          perplejidad !== null && <span className="num text-label text-muted">ppl {num(perplejidad, 2)}</span>
         )}
       </div>
       {rama.corte !== null && (
-        <div className="mb-1 text-[11px] text-zinc-400">
-          forzado <span className="font-mono text-amber-300">{mostrarToken(rama.tokens[rama.corte].token)}</span> · token #
-          {rama.corte + 1}
+        <div className="mb-1 flex items-center gap-1.5 text-label text-muted">
+          forzó
+          <span className="mono rounded-[3px] bg-accent px-1 text-[var(--accent-ink)]">{mostrarToken(rama.tokens[rama.corte].token)}</span>
+          <span className="num">en #{rama.corte + 1}</span>
         </div>
       )}
-      <div className="line-clamp-2 text-[11px] leading-snug text-zinc-300">{resumenNuevo(rama) || "…"}</div>
-      <Handle type="source" position={Position.Bottom} style={{ left: 14 }} className="!border-0 !bg-zinc-500" />
+      <div className="line-clamp-2 text-label leading-snug text-ink-2">{resumenNuevo(rama, 70) || "…"}</div>
+      <Handle type="source" position={Position.Bottom} style={{ left: 14 }} className="!h-1.5 !w-1.5 !border-0 !bg-[var(--line-2)]" />
     </div>
   );
 }
@@ -51,7 +56,7 @@ const tiposNodo = { rama: NodoRama };
 
 /**
  * Árbol de las ramas de una respuesta. Cada nodo es una versión de la respuesta;
- * las flechas van de la rama madre a la hija, en el token donde se bifurcó.
+ * las líneas van de la rama madre a la hija, en el token donde se bifurcó.
  */
 export default function ArbolRamas({
   ramas,
@@ -63,7 +68,6 @@ export default function ArbolRamas({
   onElegir: (id: string) => void;
 }) {
   const { nodes, edges } = useMemo(() => {
-    // x por profundidad (sangría), y por orden de recorrido (DFS).
     const hijos = (id: string) => ramas.filter((r) => r.padreId === id);
     const nodos: Node<DatosNodo>[] = [];
     const aristas: Edge[] = [];
@@ -79,7 +83,7 @@ export default function ArbolRamas({
         position: { x: nivel * SANGRIA, y: fila * SEP_Y },
         data: {
           rama,
-          titulo: rama.id === ID_RAIZ ? "Original" : `Rama ${indice}`,
+          titulo: rama.id === ID_RAIZ ? "Respuesta original" : `Rama ${indice}`,
           activa: rama.id === activa,
           perplejidad: m && !rama.generando ? m.perplejidad : null,
         },
@@ -91,7 +95,7 @@ export default function ArbolRamas({
           source: rama.id,
           target: hija.id,
           type: "smoothstep",
-          style: { stroke: hija.id === activa ? "#818cf8" : "#52525b" },
+          style: { stroke: hija.id === activa ? "var(--accent)" : "var(--line-2)", strokeWidth: 1.5 },
           animated: hija.generando,
         });
         visitar(hija, nivel + 1);
@@ -104,7 +108,7 @@ export default function ArbolRamas({
   }, [ramas, activa]);
 
   return (
-    <div className="h-full min-h-64 rounded-lg border border-zinc-800 bg-zinc-950/60">
+    <div className="h-full min-h-64">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -113,11 +117,12 @@ export default function ArbolRamas({
         nodesDraggable={false}
         nodesConnectable={false}
         fitView
-        fitViewOptions={{ padding: 0.1, maxZoom: 1 }}
+        fitViewOptions={{ padding: 0.12, maxZoom: 1 }}
         minZoom={0.4}
         colorMode="dark"
+        proOptions={{ hideAttribution: true }}
       >
-        <Background gap={18} size={1} color="#27272a" />
+        <Background gap={22} size={1} color="rgba(255,255,255,.07)" />
       </ReactFlow>
     </div>
   );

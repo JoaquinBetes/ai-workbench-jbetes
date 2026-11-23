@@ -1,4 +1,9 @@
+import { Info } from "lucide-react";
+import { useState } from "react";
 import type { ModelInfo } from "../../lib/api";
+import { Deslizador, Interruptor, Seccion } from "../ui/Controles";
+import Segmentado from "../ui/Segmentado";
+import SelectorModelo from "../ui/SelectorModelo";
 
 export type Config = {
   modelo: string;
@@ -26,40 +31,26 @@ export const CONFIG_INICIAL: Config = {
   max_tokens: 512,
 };
 
-const PRESETS: { nombre: string; ayuda: string; valores: Partial<Config> }[] = [
-  { nombre: "Determinista", ayuda: "Siempre elige el token más probable", valores: { temperature: 0, top_p: 1, top_k: 1 } },
-  { nombre: "Equilibrado", ayuda: "Valores típicos de un asistente", valores: { temperature: 0.7, top_p: 0.9, top_k: 40 } },
-  { nombre: "Creativo", ayuda: "Más variedad, más riesgo", valores: { temperature: 1.2, top_p: 0.95, top_k: 100 } },
+type IdPreset = "determinista" | "equilibrado" | "creativo";
+
+const PRESETS: { id: IdPreset; nombre: string; ayuda: string; valores: Pick<Config, "temperature" | "top_p" | "top_k"> }[] = [
+  { id: "determinista", nombre: "Determinista", ayuda: "Siempre elige el token más probable: misma pregunta, misma respuesta.", valores: { temperature: 0, top_p: 1, top_k: 1 } },
+  { id: "equilibrado", nombre: "Equilibrado", ayuda: "Los valores típicos de un asistente: variado pero sensato.", valores: { temperature: 0.7, top_p: 0.9, top_k: 40 } },
+  { id: "creativo", nombre: "Creativo", ayuda: "Más variedad y más riesgo: aparecen palabras poco probables.", valores: { temperature: 1.2, top_p: 0.95, top_k: 100 } },
 ];
 
-function Deslizador(props: {
-  etiqueta: string;
-  ayuda: string;
-  valor: number;
-  min: number;
-  max: number;
-  paso: number;
-  onChange: (v: number) => void;
-}) {
-  return (
-    <label className="block space-y-1" title={props.ayuda}>
-      <div className="flex justify-between text-xs">
-        <span className="text-zinc-300">{props.etiqueta}</span>
-        <span className="font-mono text-zinc-400">{props.valor}</span>
-      </div>
-      <input
-        type="range"
-        min={props.min}
-        max={props.max}
-        step={props.paso}
-        value={props.valor}
-        onChange={(e) => props.onChange(Number(e.target.value))}
-        className="w-full accent-indigo-500"
-      />
-      <p className="text-[11px] leading-snug text-zinc-500">{props.ayuda}</p>
-    </label>
-  );
-}
+const AYUDAS = {
+  inicio: "Pasá el mouse por un parámetro para ver qué hace.",
+  modelo: "El modelo que responde. La barra muestra cuánto de la VRAM útil de la GPU ocupa.",
+  think: "Los modelos qwen3 pueden razonar antes de responder. El razonamiento se muestra aparte y no se colorea.",
+  system: "Instrucciones que el modelo lee antes de cada mensaje. Cambian el tono y el formato de la respuesta.",
+  temperature: "Divide los logits antes de sortear. Baja (< 0,5) afila la distribución; alta (> 1) la aplana y aparecen opciones raras.",
+  top_p: "Solo sortea entre los tokens más probables hasta sumar esta probabilidad (nucleus sampling).",
+  top_k: "Solo sortea entre los k tokens más probables. Con k = 1 siempre sale el primero.",
+  seed: "Con la misma semilla y los mismos parámetros, el sorteo se repite y la respuesta sale igual.",
+  top_logprobs: "Cuántas alternativas guarda el inspector por cada token (logprobs que devuelve Ollama).",
+  max_tokens: "Corta la respuesta al llegar a este largo.",
+};
 
 export default function Controles({
   config,
@@ -70,121 +61,89 @@ export default function Controles({
   setConfig: (c: Config) => void;
   modelos: ModelInfo[];
 }) {
+  const [ayuda, setAyuda] = useState<keyof typeof AYUDAS>("inicio");
   const cambiar = <K extends keyof Config>(clave: K, valor: Config[K]) => setConfig({ ...config, [clave]: valor });
+  const preset = PRESETS.find(
+    (p) => p.valores.temperature === config.temperature && p.valores.top_p === config.top_p && p.valores.top_k === config.top_k,
+  );
 
   return (
-    <aside className="space-y-5 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 text-sm">
-      <section className="space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Modelo</h3>
-        <select
-          value={config.modelo}
-          onChange={(e) => cambiar("modelo", e.target.value)}
-          className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5"
-        >
-          {modelos.map((m) => (
-            <option key={m.name} value={m.name}>
-              {m.name} · {m.parameters}
-            </option>
-          ))}
-        </select>
-        <label className="flex cursor-pointer items-center gap-2 text-zinc-300">
-          <input type="checkbox" checked={config.think} onChange={(e) => cambiar("think", e.target.checked)} />
-          Modo pensar (think)
-        </label>
-      </section>
+    <aside className="panel enter flex min-h-0 flex-col" style={{ ["--delay" as string]: "90ms" }} aria-label="Parámetros">
+      <div className="panel-head">
+        <span className="panel-title">Parámetros</span>
+        <span className="panel-meta ml-auto">{preset ? preset.nombre.toLowerCase() : "a mano"}</span>
+      </div>
 
-      <section className="space-y-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">System prompt</h3>
-        <textarea
-          value={config.system}
-          onChange={(e) => cambiar("system", e.target.value)}
-          rows={3}
-          placeholder="Sos un asistente que responde en una sola oración."
-          className="w-full resize-y rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-xs"
-        />
-      </section>
+      <div className="min-h-0 flex-1 divide-y divide-[var(--line)] overflow-y-auto">
+        <Seccion titulo="Modelo">
+          <div onPointerEnter={() => setAyuda("modelo")} onFocus={() => setAyuda("modelo")}>
+            <SelectorModelo modelos={modelos} valor={config.modelo} onChange={(m) => cambiar("modelo", m)} />
+          </div>
+          <Interruptor valor={config.think} onChange={(v) => cambiar("think", v)} onAyuda={() => setAyuda("think")}>
+            Razonar antes de responder
+          </Interruptor>
+        </Seccion>
 
-      <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Sampling</h3>
-        <div className="flex gap-1">
-          {PRESETS.map((p) => (
-            <button
-              key={p.nombre}
-              title={p.ayuda}
-              onClick={() => setConfig({ ...config, ...p.valores })}
-              className="flex-1 rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 hover:bg-zinc-800"
-            >
-              {p.nombre}
-            </button>
-          ))}
-        </div>
-        <Deslizador
-          etiqueta="Temperatura"
-          ayuda="Aplana (alta) o afila (baja) la distribución antes de elegir."
-          valor={config.temperature}
-          min={0}
-          max={2}
-          paso={0.05}
-          onChange={(v) => cambiar("temperature", v)}
-        />
-        <Deslizador
-          etiqueta="Top-p"
-          ayuda="Solo considera los tokens más probables hasta sumar esta probabilidad."
-          valor={config.top_p}
-          min={0.05}
-          max={1}
-          paso={0.05}
-          onChange={(v) => cambiar("top_p", v)}
-        />
-        <Deslizador
-          etiqueta="Top-k"
-          ayuda="Solo considera los k tokens más probables."
-          valor={config.top_k}
-          min={1}
-          max={100}
-          paso={1}
-          onChange={(v) => cambiar("top_k", v)}
-        />
-        <div className="space-y-1">
-          <label className="flex cursor-pointer items-center gap-2 text-zinc-300">
-            <input type="checkbox" checked={config.seedFija} onChange={(e) => cambiar("seedFija", e.target.checked)} />
+        <Seccion titulo="Sampling">
+          <Segmentado
+            etiqueta="Presets de sampling"
+            sm
+            block
+            valor={(preset?.id ?? "") as IdPreset}
+            onChange={(id) => {
+              const p = PRESETS.find((x) => x.id === id)!;
+              setConfig({ ...config, ...p.valores });
+            }}
+            opciones={PRESETS.map((p) => ({ valor: p.id, etiqueta: p.nombre, tip: p.ayuda }))}
+          />
+          <Deslizador etiqueta="Temperatura" valor={config.temperature} min={0} max={2} paso={0.05} decimales={2} onChange={(v) => cambiar("temperature", v)} onAyuda={() => setAyuda("temperature")} />
+          <Deslizador etiqueta="Top-p" valor={config.top_p} min={0.05} max={1} paso={0.05} decimales={2} onChange={(v) => cambiar("top_p", v)} onAyuda={() => setAyuda("top_p")} />
+          <Deslizador etiqueta="Top-k" valor={config.top_k} min={1} max={100} paso={1} onChange={(v) => cambiar("top_k", v)} onAyuda={() => setAyuda("top_k")} />
+          <Interruptor
+            valor={config.seedFija}
+            onChange={(v) => cambiar("seedFija", v)}
+            onAyuda={() => setAyuda("seed")}
+            detalle={
+              config.seedFija && (
+                <input
+                  type="number"
+                  aria-label="Semilla"
+                  value={config.seed}
+                  onChange={(e) => cambiar("seed", Number(e.target.value))}
+                  className="field field--mono h-7 min-h-0 w-20 py-0 text-right"
+                />
+              )
+            }
+          >
             Semilla fija
-          </label>
-          {config.seedFija && (
-            <input
-              type="number"
-              value={config.seed}
-              onChange={(e) => cambiar("seed", Number(e.target.value))}
-              className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 font-mono text-xs"
-            />
-          )}
-          <p className="text-[11px] leading-snug text-zinc-500">
-            Con la misma semilla y parámetros, la respuesta se repite.
-          </p>
-        </div>
-      </section>
+          </Interruptor>
+        </Seccion>
 
-      <section className="space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Salida</h3>
-        <Deslizador
-          etiqueta="Alternativas por token"
-          ayuda="Cuántas opciones guarda el inspector por cada token (logprobs)."
-          valor={config.top_logprobs}
-          min={1}
-          max={20}
-          paso={1}
-          onChange={(v) => cambiar("top_logprobs", v)}
-        />
-        <Deslizador
-          etiqueta="Máximo de tokens"
-          ayuda="Corta la respuesta al llegar a este largo."
-          valor={config.max_tokens}
-          min={16}
-          max={2048}
-          paso={16}
-          onChange={(v) => cambiar("max_tokens", v)}
-        />
-      </section>
+        <Seccion titulo="Salida">
+          <Deslizador etiqueta="Alternativas por token" valor={config.top_logprobs} min={1} max={20} paso={1} onChange={(v) => cambiar("top_logprobs", v)} onAyuda={() => setAyuda("top_logprobs")} />
+          <Deslizador etiqueta="Máximo de tokens" valor={config.max_tokens} min={16} max={2048} paso={16} onChange={(v) => cambiar("max_tokens", v)} onAyuda={() => setAyuda("max_tokens")} />
+        </Seccion>
+
+        <Seccion titulo="System prompt">
+          <textarea
+            value={config.system}
+            onChange={(e) => cambiar("system", e.target.value)}
+            onFocus={() => setAyuda("system")}
+            onPointerEnter={() => setAyuda("system")}
+            rows={3}
+            aria-label="System prompt"
+            placeholder="Sos un asistente que responde en una sola oración."
+            className="field text-label"
+          />
+        </Seccion>
+      </div>
+
+      <div className="flex min-h-[76px] gap-2.5 border-t border-line px-4 py-3" aria-live="polite">
+        <Info className="mt-0.5 h-3.5 w-3.5 flex-none text-accent" aria-hidden />
+        <p key={ayuda} className="hint fade-in">
+          {AYUDAS[ayuda]}
+        </p>
+      </div>
     </aside>
   );
 }

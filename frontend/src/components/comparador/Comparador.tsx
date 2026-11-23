@@ -1,45 +1,79 @@
-import { useState } from "react";
+import { Braces, Columns3, Shuffle } from "lucide-react";
+import Segmentado from "../ui/Segmentado";
+import { EncabezadoVista } from "../ui/Vista";
 import Estructuradas from "./Estructuradas";
 import LadoALado from "./LadoALado";
 import Variabilidad from "./Variabilidad";
 
-// Los tres modos del comparador (capítulo 2). Se van habilitando de a uno.
-const MODOS = [
-  { id: "lado-a-lado", nombre: "Modelos lado a lado", listo: true },
-  { id: "variabilidad", nombre: "Variabilidad", listo: true },
-  { id: "estructuradas", nombre: "Salidas estructuradas", listo: true },
+// Los tres modos del comparador (capítulo 2).
+export const MODOS_COMPARADOR = [
+  {
+    id: "lado-a-lado",
+    nombre: "Modelos lado a lado",
+    corto: "Lado a lado",
+    claves: "comparar modelos tamaño velocidad",
+    descripcion: "El mismo prompt a varios modelos: velocidad, carga y certeza.",
+    icono: Columns3,
+  },
+  {
+    id: "variabilidad",
+    nombre: "Variabilidad",
+    corto: "Variabilidad",
+    claves: "repetir autoconsistencia temperatura muestras",
+    descripcion: "El mismo prompt muchas veces: cuántas respuestas distintas da.",
+    icono: Shuffle,
+  },
+  {
+    id: "estructuradas",
+    nombre: "Salidas estructuradas",
+    corto: "Salidas estructuradas",
+    claves: "json esquema schema",
+    descripcion: "Tres formas de obtener JSON válido, medidas sobre las mismas semillas.",
+    icono: Braces,
+  },
 ] as const;
 
-type IdModo = (typeof MODOS)[number]["id"];
+export type IdModo = (typeof MODOS_COMPARADOR)[number]["id"];
 
-export default function Comparador() {
-  const [modo, setModo] = useState<IdModo>("lado-a-lado");
-
+export default function Comparador({
+  activa = true,
+  modo,
+  onModo,
+}: {
+  activa?: boolean;
+  modo: IdModo;
+  onModo: (m: IdModo) => void;
+}) {
+  const actual = MODOS_COMPARADOR.find((m) => m.id === modo)!;
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      <div className="flex gap-1 text-sm">
-        {MODOS.map((m) => (
-          <button
-            key={m.id}
-            onClick={() => m.listo && setModo(m.id)}
-            title={m.listo ? undefined : "Próxima entrega"}
-            className={`rounded-md px-3 py-1 ${
-              modo === m.id
-                ? "bg-zinc-800 text-white"
-                : m.listo
-                  ? "text-zinc-400 hover:bg-zinc-900"
-                  : "cursor-default text-zinc-600"
-            }`}
-          >
-            {m.nombre}
-            {!m.listo && <span className="ml-1.5 text-[10px]">pronto</span>}
-          </button>
-        ))}
-      </div>
+    <div className="flex h-full flex-col px-3 pb-3">
+      <EncabezadoVista
+        capitulo="Cap. 2"
+        titulo="Comparador"
+        descripcion={actual.descripcion}
+        acciones={
+          <Segmentado
+            etiqueta="Modo del comparador"
+            valor={modo}
+            onChange={onModo}
+            opciones={MODOS_COMPARADOR.map((m) => {
+              const Icono = m.icono;
+              return { valor: m.id, etiqueta: m.corto, icono: <Icono aria-hidden /> };
+            })}
+          />
+        }
+      />
       <div className="min-h-0 flex-1">
-        {modo === "lado-a-lado" && <LadoALado />}
-        {modo === "variabilidad" && <Variabilidad />}
-        {modo === "estructuradas" && <Estructuradas />}
+        {/* Los tres modos quedan montados para no perder resultados al cambiar de pestaña. */}
+        <div hidden={modo !== "lado-a-lado"} className="h-full">
+          <LadoALado activa={activa && modo === "lado-a-lado"} />
+        </div>
+        <div hidden={modo !== "variabilidad"} className="h-full">
+          <Variabilidad activa={activa && modo === "variabilidad"} />
+        </div>
+        <div hidden={modo !== "estructuradas"} className="h-full">
+          <Estructuradas activa={activa && modo === "estructuradas"} />
+        </div>
       </div>
     </div>
   );

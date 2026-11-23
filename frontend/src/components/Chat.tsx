@@ -1,138 +1,166 @@
-import { useEffect, useRef, useState } from "react";
-import { type TokenLogprob } from "../lib/api";
-import { colorProbabilidad, pct, prob } from "../lib/probs";
+import { MessageSquareText, RotateCcw } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { EVENTO_ENFOCAR } from "../App";
+import { escribiendo, useComandos } from "../lib/comandos";
+import { num, segundos } from "../lib/formato";
 import { useModelos } from "../lib/useModelos";
 import { useStreamingChat } from "../lib/useStreamingChat";
+import TextoTokens from "./playground/TextoTokens";
+import { Interruptor } from "./ui/Controles";
+import PromptLuminoso from "./ui/PromptLuminoso";
+import SelectorModelo from "./ui/SelectorModelo";
+import { EncabezadoVista, Vacio } from "./ui/Vista";
 
-// Chat simple: tokens coloreados por probabilidad y alternativas al pasar el mouse.
-function TextoConTokens({ tokens }: { tokens: TokenLogprob[] }) {
-  return (
-    <>
-      {tokens.map((t, i) => {
-        const p = prob(t.logprob);
-        const alternativas = t.top.map((a) => `${JSON.stringify(a.token)}  ${pct(prob(a.logprob))}`).join("\n");
-        return (
-          <span
-            key={i}
-            title={`Elegido: ${JSON.stringify(t.token)} (${pct(p)})\n\nAlternativas:\n${alternativas}`}
-            style={{ backgroundColor: colorProbabilidad(p) }}
-            className="cursor-help rounded-sm"
-          >
-            {t.token}
-          </span>
-        );
-      })}
-    </>
-  );
-}
-
-export default function Chat() {
+/** Chat simple: para conversar con un modelo sin instrumentos de por medio. */
+export default function Chat({ activa = true }: { activa?: boolean }) {
   const { modelos, preferido, error: errorModelos } = useModelos();
   const [modelo, setModelo] = useState("");
   const [entrada, setEntrada] = useState("");
-  const [colorear, setColorear] = useState(true);
+  const [marcar, setMarcar] = useState(true);
   const { turnos, generando, error, enviar, detener, reiniciar } = useStreamingChat();
-  const fin = useRef<HTMLDivElement>(null);
+  const scroll = useRef<HTMLDivElement>(null);
+  const prompt = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!modelo && preferido) setModelo(preferido);
   }, [preferido, modelo]);
 
-  // Llaves a propósito: un efecto solo puede devolver una función de limpieza,
-  // y en Chrome nuevo scrollIntoView devuelve una Promise.
-  useEffect(() => {
-    fin.current?.scrollIntoView({ behavior: "smooth" });
-  }, [turnos]);
+  useLayoutEffect(() => {
+    const el = scroll.current;
+    if (el && turnos.length && el.scrollHeight - el.scrollTop - el.clientHeight < 160) el.scrollTop = el.scrollHeight;
+  });
 
   function mandar() {
     enviar(entrada, modelo);
     setEntrada("");
   }
 
-  return (
-    <div className="mx-auto flex h-full max-w-4xl flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        <label className="flex items-center gap-2">
-          <span className="text-zinc-400">Modelo</span>
-          <select
-            value={modelo}
-            onChange={(e) => setModelo(e.target.value)}
-            className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1"
-          >
-            {modelos.map((m) => (
-              <option key={m.name} value={m.name}>
-                {m.name} · {m.parameters} · {m.size_gb} GB
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex cursor-pointer items-center gap-2 text-zinc-300">
-          <input type="checkbox" checked={colorear} onChange={(e) => setColorear(e.target.checked)} />
-          Colorear tokens por probabilidad
-        </label>
-        <button
-          onClick={reiniciar}
-          className="ml-auto rounded-md border border-zinc-700 px-3 py-1 text-zinc-300 hover:bg-zinc-800"
-        >
-          Nueva conversación
-        </button>
-      </div>
+  function nueva() {
+    reiniciar();
+    prompt.current?.focus();
+  }
 
-      <div className="flex-1 space-y-4 overflow-y-auto rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
-        {turnos.length === 0 && (
-          <p className="text-center text-sm text-zinc-500">
-            Escribile algo al modelo. Pasá el mouse por un token para ver su probabilidad y las alternativas.
-          </p>
-        )}
-        {turnos.map((t, i) => (
-          <div key={i} className={t.role === "user" ? "flex justify-end" : ""}>
-            <div
-              className={`max-w-[85%] whitespace-pre-wrap rounded-xl px-4 py-2 leading-relaxed ${
-                t.role === "user" ? "bg-indigo-600/80" : "bg-zinc-800"
-              }`}
-            >
-              {t.role === "assistant" && colorear && t.tokens?.length ? (
-                <TextoConTokens tokens={t.tokens} />
-              ) : (
-                t.content || (generando && i === turnos.length - 1 ? "…" : "")
-              )}
-              {t.stats && (
-                <div className="mt-2 border-t border-zinc-700 pt-1 text-xs text-zinc-400">
-                  {t.stats.output_tokens} tokens · {t.stats.tokens_per_second} tok/s · primer token en{" "}
-                  {t.stats.time_to_first_token_s} s
-                </div>
+  const detenerRef = useRef(detener);
+  detenerRef.current = detener;
+  useEffect(() => {
+    if (!activa) return;
+    const alTeclear = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !escribiendo(e) && !document.querySelector(".overlay")) detenerRef.current();
+    };
+    const enfocar = (e: Event) => (e as CustomEvent).detail === "chat" && prompt.current?.focus();
+    window.addEventListener("keydown", alTeclear);
+    window.addEventListener(EVENTO_ENFOCAR, enfocar);
+    return () => {
+      window.removeEventListener("keydown", alTeclear);
+      window.removeEventListener(EVENTO_ENFOCAR, enfocar);
+    };
+  }, [activa]);
+
+  useComandos(
+    "chat",
+    activa
+      ? [
+          { id: "chat-nueva", titulo: "Nueva conversación en el chat", grupo: "Chat", ejecutar: nueva },
+          { id: "chat-marcas", titulo: marcar ? "Chat: quitar las marcas de duda" : "Chat: marcar la duda de cada token", grupo: "Chat", ejecutar: () => setMarcar((m) => !m) },
+        ]
+      : [],
+  );
+
+  return (
+    <div className="flex h-full flex-col px-3 pb-3">
+      <EncabezadoVista
+        titulo="Chat"
+        descripcion="Conversación libre con un modelo, con la duda de cada token a la vista."
+        acciones={
+          <>
+            <div className="w-64">
+              <SelectorModelo modelos={modelos} valor={modelo} onChange={setModelo} />
+            </div>
+            <div className="w-44">
+              <Interruptor valor={marcar} onChange={setMarcar}>
+                Marcar la duda
+              </Interruptor>
+            </div>
+            <button type="button" onClick={nueva} className="btn btn--sm" disabled={!turnos.length}>
+              <RotateCcw aria-hidden /> Nueva conversación
+            </button>
+          </>
+        }
+      />
+
+      <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto">
+        <div className="mx-auto flex min-h-full max-w-[760px] flex-col px-3">
+          {turnos.length === 0 ? (
+            <div className="flex-1">
+              <Vacio icono={<MessageSquareText />} titulo="Escribile algo al modelo">
+                Pasá el mouse por un token de la respuesta para ver con qué probabilidad lo eligió.
+              </Vacio>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              {turnos.map((t, i) =>
+                t.role === "user" ? (
+                  <div key={i} className="rise-in flex justify-end">
+                    <p className="max-w-[80%] whitespace-pre-wrap rounded-lg rounded-br-sm border border-line bg-raised px-4 py-2.5 text-body text-ink">
+                      {t.content}
+                    </p>
+                  </div>
+                ) : (
+                  <div key={i} className="rise-in space-y-2">
+                    <div className="flex items-center gap-2 text-label text-muted">
+                      <span className="live live--idle" aria-hidden />
+                      <span className="mono">{modelo}</span>
+                    </div>
+                    {t.tokens?.length ? (
+                      <TextoTokens
+                        tokens={t.tokens}
+                        modo={marcar ? "duda" : "ninguno"}
+                        seleccionado={null}
+                        onSeleccionar={() => {}}
+                        cursor={generando && i === turnos.length - 1}
+                      />
+                    ) : (
+                      <div className="tokens">
+                        {t.content}
+                        {generando && i === turnos.length - 1 && (
+                          <span className="flex items-center gap-2 text-label text-muted">
+                            <span className="spin" aria-hidden /> Pensando…
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {t.stats && (
+                      <p className="num text-label text-muted">
+                        {t.stats.output_tokens} tokens · {num(t.stats.tokens_per_second, 1)} tok/s · primer token en{" "}
+                        {segundos(t.stats.time_to_first_token_s)}
+                      </p>
+                    )}
+                  </div>
+                ),
               )}
             </div>
-          </div>
-        ))}
-        <div ref={fin} />
+          )}
+        </div>
       </div>
 
-      {(error || errorModelos) && <p className="text-sm text-rose-400">{error ?? errorModelos}</p>}
+      {(error || errorModelos) && (
+        <p className="tag tag--danger mx-auto mb-2 h-auto max-w-[760px] py-1">{error ?? errorModelos}</p>
+      )}
 
-      <div className="flex gap-2">
-        <textarea
-          value={entrada}
-          onChange={(e) => setEntrada(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              mandar();
-            }
-          }}
-          rows={2}
-          placeholder="Escribí tu mensaje (Enter para enviar, Shift+Enter para salto de línea)"
-          className="flex-1 resize-none rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 outline-none focus:border-indigo-500"
+      <div className="mx-auto w-full max-w-[784px] px-3 pt-2">
+        <PromptLuminoso
+          entradaRef={prompt}
+          valor={entrada}
+          onCambio={setEntrada}
+          onEnviar={mandar}
+          onDetener={detener}
+          generando={generando}
+          deshabilitado={!modelo}
+          etiqueta="Mensaje para el modelo"
+          placeholder="Escribí tu mensaje"
+          chip={modelo || "sin modelo"}
+          ejemplos={turnos.length ? [] : ["¿Qué es un token?", "Recomendame un libro de ciencia ficción corto"]}
         />
-        {generando ? (
-          <button onClick={detener} className="rounded-xl bg-rose-600 px-5 font-medium hover:bg-rose-500">
-            Detener
-          </button>
-        ) : (
-          <button onClick={mandar} className="rounded-xl bg-indigo-600 px-5 font-medium hover:bg-indigo-500">
-            Enviar
-          </button>
-        )}
       </div>
     </div>
   );
