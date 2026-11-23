@@ -4,14 +4,30 @@ import { alternativas, entropia, mostrarToken, pct, prob } from "../../lib/probs
 
 const CONTEXTO = 8; // tokens previos que se muestran para ubicar el token
 
+export type EstadoToken = "original" | "heredado" | "forzado" | "generado";
+
+const ETIQUETA_ESTADO: Record<EstadoToken, { texto: string; clase: string } | null> = {
+  original: null,
+  heredado: { texto: "Heredado de la rama madre", clase: "bg-zinc-700/60 text-zinc-300" },
+  forzado: { texto: "Token forzado por vos", clase: "bg-amber-500/20 text-amber-300" },
+  generado: { texto: "Generado en esta rama", clase: "bg-emerald-500/15 text-emerald-300" },
+};
+
 export default function InspectorToken({
   tokens,
   indice,
   onMover,
+  estado = "original",
+  onBifurcar,
+  bloqueado = false,
 }: {
   tokens: TokenLogprob[] | null;
   indice: number | null;
   onMover: (i: number) => void;
+  estado?: EstadoToken;
+  /** Crea una rama nueva forzando esta alternativa en este punto. */
+  onBifurcar?: (alternativa: { token: string; logprob: number }) => void;
+  bloqueado?: boolean;
 }) {
   if (!tokens || indice === null || !tokens[indice]) {
     return (
@@ -52,6 +68,12 @@ export default function InspectorToken({
           </button>
         </div>
       </div>
+
+      {ETIQUETA_ESTADO[estado] && (
+        <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] ${ETIQUETA_ESTADO[estado]!.clase}`}>
+          {ETIQUETA_ESTADO[estado]!.texto}
+        </span>
+      )}
 
       <div className="rounded-lg bg-zinc-950/60 p-3 font-mono text-xs leading-relaxed text-zinc-400">
         <span className="text-zinc-500">…</span>
@@ -112,6 +134,32 @@ export default function InspectorToken({
           los ~150.000 tokens del vocabulario.
         </p>
       </div>
+
+      {onBifurcar && (
+        <div className="space-y-1.5">
+          <h4 className="text-xs text-zinc-400">¿Y si hubiera elegido otro?</h4>
+          <p className="text-[11px] leading-snug text-zinc-500">
+            Forzá una alternativa y el modelo sigue escribiendo desde ahí, en una rama nueva.
+          </p>
+          <div className="space-y-1">
+            {datos
+              .filter((d) => !d.elegido)
+              .map((d) => (
+                <button
+                  key={d.token}
+                  disabled={bloqueado}
+                  onClick={() => onBifurcar({ token: d.token, logprob: Math.log(d.p) })}
+                  className="flex w-full items-center justify-between rounded-md border border-zinc-700 px-2 py-1 text-left text-xs hover:border-amber-400/60 hover:bg-amber-400/10 disabled:cursor-wait disabled:opacity-50"
+                >
+                  <span className="font-mono text-zinc-200">{mostrarToken(d.token)}</span>
+                  <span className="text-zinc-400">
+                    {pct(d.p)} <span className="ml-1 text-amber-300">seguir por acá ↳</span>
+                  </span>
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

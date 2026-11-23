@@ -19,7 +19,17 @@ export function useStreamingChat() {
   const [error, setError] = useState<string | null>(null);
   const cancelar = useRef<AbortController | null>(null);
 
-  async function enviar(texto: string, modelo: string, parametros: Parametros = {}, system?: string) {
+  /**
+   * `reemplazos` permite mandar, para algunos turnos del asistente, un texto
+   * distinto del original (por ejemplo, la rama que el usuario eligió).
+   */
+  async function enviar(
+    texto: string,
+    modelo: string,
+    parametros: Parametros = {},
+    system?: string,
+    reemplazos: Record<number, string> = {},
+  ) {
     if (!texto.trim() || !modelo || generando) return;
 
     const historial: Turno[] = [...turnos, { role: "user", content: texto.trim() }];
@@ -34,7 +44,7 @@ export function useStreamingChat() {
 
     const mensajes: ChatMessage[] = [
       ...(system?.trim() ? [{ role: "system" as const, content: system.trim() }] : []),
-      ...historial.map(({ role, content }) => ({ role, content })),
+      ...historial.map(({ role, content }, i) => ({ role, content: reemplazos[i] ?? content })),
     ];
 
     try {

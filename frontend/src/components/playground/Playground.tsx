@@ -1,18 +1,33 @@
 import { useEffect, useRef, useState } from "react";
-import { getModels, type ModelInfo } from "../../lib/api";
-import { useStreamingChat } from "../../lib/useStreamingChat";
+import { getModels, streamContinue, type ChatMessage, type ModelInfo } from "../../lib/api";
+import { ID_RAIZ, nuevoId, textoDe, type Rama } from "../../lib/ramas";
+import { mostrarToken } from "../../lib/probs";
+import { useStreamingChat, type Parametros } from "../../lib/useStreamingChat";
 import Controles, { CONFIG_INICIAL, type Config } from "./Controles";
-import InspectorToken from "./InspectorToken";
+import InspectorToken, { type EstadoToken } from "./InspectorToken";
 import MetricasRespuesta from "./MetricasRespuesta";
 import TextoTokens, { type ModoColor } from "./TextoTokens";
 
-type Seleccion = { turno: number; indice: number } | null;
+type Seleccion = { turno: number; rama: string; indice: number } | null;
+
+/** Con qué modelo y system prompt se generó cada respuesta (las ramas usan los mismos). */
+type Contexto = { modelo: string; system: string };
 
 const MODOS: { valor: ModoColor; nombre: string; ayuda: string }[] = [
   { valor: "probabilidad", nombre: "Probabilidad", ayuda: "Verde = token muy probable; rojo = poco probable" },
   { valor: "incertidumbre", nombre: "Incertidumbre", ayuda: "Violeta = el modelo dudaba entre varias opciones parecidas" },
   { valor: "ninguno", nombre: "Sin color", ayuda: "Texto plano (igual se puede hacer clic)" },
 ];
+
+const parametrosDe = (c: Config): Parametros => ({
+  temperature: c.temperature,
+  top_p: c.top_p,
+  top_k: c.top_k,
+  seed: c.seedFija ? c.seed : null,
+  think: c.think,
+  top_logprobs: c.top_logprobs,
+  max_tokens: c.max_tokens,
+});
 
 export default function Playground() {
   const [modelos, setModelos] = useState<ModelInfo[]>([]);
@@ -21,6 +36,11 @@ export default function Playground() {
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
   const [entrada, setEntrada] = useState("");
   const { turnos, generando, error, enviar, detener, reiniciar } = useStreamingChat();
+
+  // Ramas creadas por el usuario, por turno del asistente (la original se arma desde `turnos`).
+  const [ramasExtra, setRamasExtra] = useState<Record<number, Rama[]>>({});
+  const [ramaActiva, setRamaActiva] = useState<Record<number, string>>({});
+  const [contextos, setContextos] = useState<Record<number, Contexto>>({});
   const fin = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,27 +55,105 @@ export default function Playground() {
     fin.current?.scrollIntoView({ behavior: "smooth" });
   }, [turnos.length]);
 
+  // --- Ramas -----------------------------------------------------------------
+
+  function ramasDe(turno: number): Rama[] {
+    const t = turnos[turno];
+    const original: Rama = {
+      id: ID_RAIZ,
+      padreId: null,
+      corte: null,
+      tokens: t?.tokens ?? [],
+      generando: generando && turno === turnos.length - 1,
+      stats: t?.stats,
+    };
+    return [original, ...(ramasExtra[turno] ?? [])];
+  }
+
+  function ramaDe(turno: number, id?: string): Rama {
+    const ramas = ramasDe(turno);
+    return ramas.find((r) => r.id === (id ?? ramaActiva[turno] ?? ID_RAIZ)) ?? ramas[0];
+  }
+
+  /** Texto que cuenta como "la respuesta" de un turno: el de la rama activa. */
+  function contenidoActivo(turno: number): string {
+    const id = ramaActiva[turno];
+    if (!id || id === ID_RAIZ) return turnos[turno].content;
+    return textoDe(ramaDe(turno, id).tokens);
+  }
+
+  const actualizarRama = (turno: number, id: string, f: (r: Rama) => Rama) =>
+    setRamasExtra((prev) => ({ ...prev, [turno]: (prev[turno] ?? []).map((r) => (r.id === id ? f(r) : r)) }));
+
+  async function bifurcar(turno: number, origen: Rama, indice: number, alternativa: { token: string; logprob: number }) {
+    const ctx = contextos[turno] ?? { modelo: config.modelo, system: config.system };
+    const forzado = { ...alternativa, top: origen.tokens[indice].top };
+    const base = [...origen.tokens.slice(0, indice), forzado];
+    const nueva: Rama = { id: nuevoId(), padreId: origen.id, corte: indice, tokens: base, generando: true };
+
+    setRamasExtra((prev) => ({ ...prev, [turno]: [...(prev[turno] ?? []), nueva] }));
+    setRamaActiva((prev) => ({ ...prev, [turno]: nueva.id }));
+    setSeleccion({ turno, rama: nueva.id, indice });
+
+    const historial: ChatMessage[] = [
+      ...(ctx.system.trim() ? [{ role: "system" as const, content: ctx.system.trim() }] : []),
+      ...turnos.slice(0, turno).map((t, i) => ({
+        role: t.role,
+        content: t.role === "assistant" ? contenidoActivo(i) : t.content,
+      })),
+    ];
+
+    try {
+      for await (const ev of streamContinue({
+        model: ctx.modelo,
+        messages: historial,
+        prefix: textoDe(base),
+        thinking: turnos[turno].thinking || null,
+        ...parametrosDe(config),
+      })) {
+        if (ev.type === "meta") actualizarRama(turno, nueva.id, (r) => ({ ...r, metodo: ev.method }));
+        else if (ev.type === "token")
+          actualizarRama(turno, nueva.id, (r) => ({ ...r, tokens: [...r.tokens, ...ev.logprobs] }));
+        else if (ev.type === "done") actualizarRama(turno, nueva.id, (r) => ({ ...r, stats: ev.stats }));
+        else if (ev.type === "error") actualizarRama(turno, nueva.id, (r) => ({ ...r, error: ev.message }));
+      }
+    } catch (e) {
+      actualizarRama(turno, nueva.id, (r) => ({ ...r, error: (e as Error).message }));
+    } finally {
+      actualizarRama(turno, nueva.id, (r) => ({ ...r, generando: false }));
+    }
+  }
+
+  // --- Conversación ----------------------------------------------------------
+
   function mandar() {
-    if (!entrada.trim()) return;
-    enviar(
-      entrada,
-      config.modelo,
-      {
-        temperature: config.temperature,
-        top_p: config.top_p,
-        top_k: config.top_k,
-        seed: config.seedFija ? config.seed : null,
-        think: config.think,
-        top_logprobs: config.top_logprobs,
-        max_tokens: config.max_tokens,
-      },
-      config.system,
-    );
+    if (!entrada.trim() || generando) return;
+    const reemplazos: Record<number, string> = {};
+    turnos.forEach((t, i) => {
+      if (t.role === "assistant" && ramaActiva[i] && ramaActiva[i] !== ID_RAIZ) reemplazos[i] = contenidoActivo(i);
+    });
+    setContextos((prev) => ({ ...prev, [turnos.length + 1]: { modelo: config.modelo, system: config.system } }));
+    enviar(entrada, config.modelo, parametrosDe(config), config.system, reemplazos);
     setEntrada("");
     setSeleccion(null);
   }
 
-  const tokensSeleccionados = seleccion ? (turnos[seleccion.turno]?.tokens ?? null) : null;
+  function nuevaConversacion() {
+    reiniciar();
+    setSeleccion(null);
+    setRamasExtra({});
+    setRamaActiva({});
+    setContextos({});
+  }
+
+  // --- Inspector -------------------------------------------------------------
+
+  const ramaSeleccionada = seleccion ? ramaDe(seleccion.turno, seleccion.rama) : null;
+  let estadoToken: EstadoToken = "original";
+  if (ramaSeleccionada && seleccion && ramaSeleccionada.corte !== null) {
+    const c = ramaSeleccionada.corte;
+    estadoToken = seleccion.indice < c ? "heredado" : seleccion.indice === c ? "forzado" : "generado";
+  }
 
   return (
     <div className="grid h-full min-h-0 grid-cols-[17rem_minmax(0,1fr)_22rem] gap-4">
@@ -75,10 +173,7 @@ export default function Playground() {
             </button>
           ))}
           <button
-            onClick={() => {
-              reiniciar();
-              setSeleccion(null);
-            }}
+            onClick={nuevaConversacion}
             className="ml-auto rounded-md border border-zinc-700 px-3 py-1 text-zinc-300 hover:bg-zinc-800"
           >
             Nueva conversación
@@ -94,44 +189,89 @@ export default function Playground() {
                 entre qué opciones dudaba el modelo.
               </p>
               <p className="text-xs">
-                Probá: la misma pregunta con temperatura 0 y con 1.5, o una pregunta de hecho contra una creativa.
+                Desde el inspector podés forzar una alternativa y ver cómo sigue la respuesta en una rama nueva.
               </p>
             </div>
           )}
 
-          {turnos.map((t, i) =>
-            t.role === "user" ? (
-              <div key={i} className="flex justify-end">
-                <div className="max-w-[85%] whitespace-pre-wrap rounded-xl bg-indigo-600/80 px-4 py-2">{t.content}</div>
-              </div>
-            ) : (
+          {turnos.map((t, i) => {
+            if (t.role === "user") {
+              return (
+                <div key={i} className="flex justify-end">
+                  <div className="max-w-[85%] whitespace-pre-wrap rounded-xl bg-indigo-600/80 px-4 py-2">{t.content}</div>
+                </div>
+              );
+            }
+            const ramas = ramasDe(i);
+            const rama = ramaDe(i);
+            const pos = ramas.findIndex((r) => r.id === rama.id);
+            const cambiarRama = (delta: number) => {
+              const otra = ramas[(pos + delta + ramas.length) % ramas.length];
+              setRamaActiva((prev) => ({ ...prev, [i]: otra.id }));
+              setSeleccion(null);
+            };
+            return (
               <div key={i} className="rounded-xl bg-zinc-800/70 px-4 py-3">
+                {ramas.length > 1 && (
+                  <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-zinc-700 pb-2 text-xs text-zinc-400">
+                    <button onClick={() => cambiarRama(-1)} className="rounded border border-zinc-700 px-2 hover:bg-zinc-700">
+                      ‹
+                    </button>
+                    <span className="font-medium text-zinc-200">
+                      {rama.corte === null ? "Respuesta original" : `Rama ${pos}`}
+                    </span>
+                    <span>
+                      ({pos + 1} de {ramas.length})
+                    </span>
+                    <button onClick={() => cambiarRama(1)} className="rounded border border-zinc-700 px-2 hover:bg-zinc-700">
+                      ›
+                    </button>
+                    {rama.corte !== null && (
+                      <span>
+                        · forzado <span className="font-mono text-amber-300">{mostrarToken(rama.tokens[rama.corte].token)}</span>{" "}
+                        en el token #{rama.corte + 1}
+                      </span>
+                    )}
+                    {rama.metodo && (
+                      <span className="ml-auto rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px]" title="Cómo se generó la continuación">
+                        {rama.metodo}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {t.thinking && (
                   <details className="mb-2 rounded-lg bg-zinc-900/60 px-3 py-2 text-xs text-zinc-400">
                     <summary className="cursor-pointer select-none">Razonamiento del modelo</summary>
                     <p className="mt-2 whitespace-pre-wrap">{t.thinking}</p>
                   </details>
                 )}
-                {t.tokens?.length ? (
+
+                {rama.tokens.length ? (
                   <TextoTokens
-                    tokens={t.tokens}
+                    tokens={rama.tokens}
                     modo={modo}
-                    seleccionado={seleccion?.turno === i ? seleccion.indice : null}
-                    onSeleccionar={(indice) => setSeleccion({ turno: i, indice })}
+                    corte={rama.corte}
+                    seleccionado={seleccion?.turno === i && seleccion.rama === rama.id ? seleccion.indice : null}
+                    onSeleccionar={(indice) => setSeleccion({ turno: i, rama: rama.id, indice })}
                   />
                 ) : (
-                  <span className="whitespace-pre-wrap">{t.content || (generando ? "…" : "")}</span>
+                  <span className="whitespace-pre-wrap">{t.content || (rama.generando ? "…" : "")}</span>
                 )}
-                {t.tokens && t.tokens.length > 0 && !(generando && i === turnos.length - 1) && (
+                {rama.generando && rama.corte !== null && <span className="ml-1 animate-pulse text-zinc-500">▍</span>}
+                {rama.error && <p className="mt-2 text-sm text-rose-400">{rama.error}</p>}
+
+                {rama.tokens.length > 0 && !rama.generando && (
                   <MetricasRespuesta
-                    tokens={t.tokens}
-                    stats={t.stats}
-                    onSeleccionar={(indice) => setSeleccion({ turno: i, indice })}
+                    tokens={rama.tokens}
+                    stats={rama.stats}
+                    desde={rama.corte === null ? 0 : rama.corte + 1}
+                    onSeleccionar={(indice) => setSeleccion({ turno: i, rama: rama.id, indice })}
                   />
                 )}
               </div>
-            ),
-          )}
+            );
+          })}
           <div ref={fin} />
         </div>
 
@@ -164,9 +304,16 @@ export default function Playground() {
       </section>
 
       <InspectorToken
-        tokens={tokensSeleccionados}
+        tokens={ramaSeleccionada?.tokens ?? null}
         indice={seleccion?.indice ?? null}
         onMover={(indice) => seleccion && setSeleccion({ ...seleccion, indice })}
+        estado={estadoToken}
+        bloqueado={generando || !!ramaSeleccionada?.generando}
+        onBifurcar={
+          seleccion && ramaSeleccionada
+            ? (alt) => bifurcar(seleccion.turno, ramaSeleccionada, seleccion.indice, alt)
+            : undefined
+        }
       />
     </div>
   );
