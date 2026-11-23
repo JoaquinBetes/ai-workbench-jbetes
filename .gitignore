@@ -17,3 +17,4 @@ backend/static/
 # Editores y sistema
 .vscode/
 .DS_Store
+.taste-skill/
