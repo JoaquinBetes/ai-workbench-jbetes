@@ -1,6 +1,5 @@
-import { Braces, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
-import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   muestraEstructurada,
   type EvaluacionEstructurada,
@@ -13,7 +12,9 @@ import { useModelos } from "../../lib/useModelos";
 import { Deslizador, Interruptor, Seccion } from "../ui/Controles";
 import Segmentado from "../ui/Segmentado";
 import SelectorModelo from "../ui/SelectorModelo";
-import { EJE, GRILLA, TipGrafico, Vacio } from "../ui/Vista";
+import { escenaCubo } from "../../lib/ascii";
+import { Barras } from "../graficos3d";
+import { Vacio } from "../ui/Vista";
 import { BotonCorrer, PanelConfig, SERIES_HEX } from "./comun";
 import { EJEMPLOS_ESQUEMAS } from "./ejemplosEsquemas";
 
@@ -66,9 +67,9 @@ function resaltar(texto: string): ReactNode[] {
     if (m[1] && m[2]) {
       partes.push(<span key={k++} className="text-ink">{m[1]}</span>, m[2]);
     } else if (m[1]) {
-      partes.push(<span key={k++} style={{ color: "var(--accent)" }}>{m[1]}</span>);
+      partes.push(<span key={k++} style={{ color: "var(--syn-texto)" }}>{m[1]}</span>);
     } else if (m[3]) {
-      partes.push(<span key={k++} style={{ color: "#7cb5f2" }}>{m[3]}</span>);
+      partes.push(<span key={k++} style={{ color: "var(--syn-numero)" }}>{m[3]}</span>);
     } else {
       partes.push(<span key={k++} style={{ color: "var(--doubt)" }}>{m[4]}</span>);
     }
@@ -120,8 +121,8 @@ function EditorCodigo({
 
 function Barrita({ v, color }: { v: number | null; color: string }) {
   return (
-    <span className="mt-2 block h-[3px] overflow-hidden rounded-full bg-line" aria-hidden>
-      <span className="block h-full origin-left rounded-full" style={{ background: color, transform: `scaleX(${v ?? 0})`, transition: "transform 300ms var(--ease)" }} />
+    <span className="mt-2 block h-[3px] overflow-hidden bg-line" aria-hidden>
+      <span className="block h-full origin-left" style={{ background: color, transform: `scaleX(${v ?? 0})`, transition: "transform 300ms var(--ease)" }} />
     </span>
   );
 }
@@ -267,10 +268,10 @@ export default function Estructuradas({ activa = true }: { activa?: boolean }) {
   ];
 
   const ejemplos = [...EJEMPLOS_ESQUEMAS.map((e) => ({ id: e.id, nombre: e.nombre })), { id: "custom", nombre: "Personalizado" }];
-  const marca = (malo: boolean) => (malo ? <span className="h-1.5 w-1.5 rounded-full bg-danger" aria-label="con errores" /> : null);
+  const marca = (malo: boolean) => (malo ? <span className="h-1.5 w-1.5 bg-danger" aria-label="con errores" /> : null);
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[18.5rem_minmax(0,1fr)] gap-3">
+    <div className="grid h-full min-h-0 grid-cols-[18.5rem_minmax(0,1fr)] gap-3 max-lg:h-auto max-lg:grid-cols-1">
       <PanelConfig
         meta={`${total} generaciones`}
         pie={
@@ -296,11 +297,11 @@ export default function Estructuradas({ activa = true }: { activa?: boolean }) {
                 type="button"
                 aria-pressed={ejemploId === e.id}
                 onClick={() => elegirEjemplo(e.id)}
-                className={`flex w-full items-center gap-2 rounded-md border px-2.5 py-1.5 text-left text-label transition-colors ${
+                className={`flex w-full items-center gap-2 border px-2.5 py-1.5 text-left text-label transition-colors ${
                   ejemploId === e.id ? "border-line-2 bg-raised text-ink" : "border-transparent text-ink-2 hover:bg-raised"
                 }`}
               >
-                <span className={`h-1.5 w-1.5 rounded-full ${ejemploId === e.id ? "bg-accent" : "bg-line-2"}`} aria-hidden />
+                <span className={`h-1.5 w-1.5 ${ejemploId === e.id ? "bg-accent" : "bg-line-2"}`} aria-hidden />
                 {e.nombre}
               </button>
             ))}
@@ -316,8 +317,8 @@ export default function Estructuradas({ activa = true }: { activa?: boolean }) {
             Sin restricción
           </Interruptor>
           <p className="hint -mt-1 pl-[46px]">
-            Una sola generación evaluada como <b className="font-medium" style={{ color: "#7cb5f2" }}>solo prompt</b> y como{" "}
-            <b className="font-medium" style={{ color: "#ec8a62" }}>prompt + post-proceso</b>.
+            Una sola generación evaluada como <b className="font-medium" style={{ color: SERIES_HEX[0] }}>solo prompt</b> y como{" "}
+            <b className="font-medium" style={{ color: SERIES_HEX[1] }}>prompt + post-proceso</b>.
           </p>
           <Interruptor valor={restringido} onChange={setRestringido}>
             Sampling restringido
@@ -326,7 +327,7 @@ export default function Estructuradas({ activa = true }: { activa?: boolean }) {
         </Seccion>
       </PanelConfig>
 
-      <section className="min-h-0 space-y-3 overflow-y-auto pr-1" aria-label="Entrada y resultados">
+      <section className="min-h-0 space-y-3 overflow-y-auto pr-1 max-lg:overflow-visible max-lg:pr-0" aria-label="Entrada y resultados">
         <div className="panel enter flex h-[340px] flex-col" style={{ ["--delay" as string]: "120ms" }}>
           <div className="panel-head">
             <Segmentado
@@ -385,7 +386,7 @@ export default function Estructuradas({ activa = true }: { activa?: boolean }) {
 
         {muestras.length === 0 && !corriendo && (
           <div className="panel">
-            <Vacio icono={<Braces />} titulo="Tres formas de pedir JSON">
+            <Vacio escena={escenaCubo} etiquetaEscena="Un cubo de caracteres que gira, con llaves en los vértices" titulo="Tres formas de pedir JSON">
               Ejecutá y comparamos qué tan seguido cada método da JSON válido, cumple el esquema y acierta los datos.
             </Vacio>
           </div>
@@ -398,7 +399,7 @@ export default function Estructuradas({ activa = true }: { activa?: boolean }) {
                 <div key={r.id} className="relative p-4" data-tip={r.ayuda}>
                   <span className="absolute inset-x-0 top-0 h-[2px]" style={{ background: r.color }} aria-hidden />
                   <div className="flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: r.color }} aria-hidden />
+                    <span className="h-2.5 w-2.5" style={{ background: r.color }} aria-hidden />
                     <span className="panel-title">{r.nombre}</span>
                     <span className="num ml-auto text-label text-muted">{r.n} muestras</span>
                   </div>
@@ -431,30 +432,26 @@ export default function Estructuradas({ activa = true }: { activa?: boolean }) {
                 <span className="ml-auto flex flex-wrap items-center gap-4">
                   {resumen.map((r) => (
                     <span key={r.id} className="flex items-center gap-1.5 text-label text-ink-2">
-                      <span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: r.color }} aria-hidden />
+                      <span className="h-2.5 w-2.5" style={{ background: r.color }} aria-hidden />
                       {r.nombre}
                     </span>
                   ))}
                 </span>
               </div>
-              <div className="h-60 px-2 pt-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={datosGrafico} margin={{ top: 22, right: 12, bottom: 0, left: -8 }} barGap={3}>
-                    <CartesianGrid {...GRILLA} />
-                    <XAxis dataKey="metrica" {...EJE} tick={{ ...EJE.tick, fontFamily: "var(--font-text)" }} />
-                    <YAxis domain={[0, 100]} ticks={[0, 50, 100]} tickFormatter={(v) => `${v} %`} {...EJE} />
-                    <Tooltip
-                      cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                      content={<TipGrafico formato={(v) => `${v} %`} nombres={Object.fromEntries(METODOS.map((m) => [m.id, m.nombre]))} />}
-                    />
-                    {resumen.map((r) => (
-                      <Bar key={r.id} dataKey={r.id} fill={r.color} radius={[4, 4, 0, 0]} maxBarSize={24} isAnimationActive={false}>
-                        <LabelList dataKey={r.id} position="top" formatter={(v) => `${v}`} style={{ fill: "var(--ink-2)", fontSize: 13, fontFamily: "var(--font-mono)" }} />
-                      </Bar>
-                    ))}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <Barras
+                titulo="Barras 3D: una fila por método y una columna por medida, de 0 a 100 %"
+                columnas={datosGrafico.map((d) => ({ "JSON válido": "json", "Cumple el esquema": "esquema", "Datos correctos": "datos" })[d.metrica] ?? d.metrica)}
+                series={resumen.map((r) => ({ etiqueta: r.nombre, color: r.color }))}
+                valores={resumen.map((r) => datosGrafico.map((d) => {
+                  const v = (d as Record<string, number | null | string>)[r.id];
+                  return typeof v === "number" ? v / 100 : null;
+                }))}
+                textos={resumen.map((r) => datosGrafico.map((d) => {
+                  const v = (d as Record<string, number | null | string>)[r.id];
+                  return `${r.nombre} · ${d.metrica}: ${typeof v === "number" ? `${v} %` : "sin dato"}`;
+                }))}
+                alto={320}
+              />
               <p className="hint border-t border-line px-4 py-2.5">
                 “Datos correctos” mide el contenido, no el formato: un JSON perfecto puede tener la edad equivocada.
               </p>
@@ -490,7 +487,7 @@ export default function Estructuradas({ activa = true }: { activa?: boolean }) {
                         const met = METODOS.find((x) => x.id === m)!;
                         return (
                           <span key={m} className="flex items-center gap-1.5" data-tip={met.nombre}>
-                            <span className="h-2 w-2 rounded-[2px]" style={{ background: met.color }} aria-hidden />
+                            <span className="h-2 w-2" style={{ background: met.color }} aria-hidden />
                             <span className={`tag ${ev.json_ok ? "" : "tag--danger"}`}>{ev.json_ok ? "✓" : "✗"} json</span>
                             <span className={`tag ${ev.schema_ok ? "" : "tag--danger"}`}>{ev.schema_ok ? "✓" : "✗"} esquema</span>
                             {ev.accuracy !== null && (

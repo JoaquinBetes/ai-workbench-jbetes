@@ -46,7 +46,7 @@ export default function Comparador({
 }) {
   const actual = MODOS_COMPARADOR.find((m) => m.id === modo)!;
   return (
-    <div className="flex h-full flex-col px-3 pb-3">
+    <div className="flex h-full flex-col px-3 pb-3 max-lg:h-auto">
       <EncabezadoVista
         capitulo="Cap. 2"
         titulo="Comparador"
@@ -63,15 +63,15 @@ export default function Comparador({
           />
         }
       />
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 max-lg:flex-none">
         {/* Los tres modos quedan montados para no perder resultados al cambiar de pestaña. */}
-        <div hidden={modo !== "lado-a-lado"} className="h-full">
+        <div hidden={modo !== "lado-a-lado"} className="h-full max-lg:h-auto">
           <LadoALado activa={activa && modo === "lado-a-lado"} />
         </div>
-        <div hidden={modo !== "variabilidad"} className="h-full">
+        <div hidden={modo !== "variabilidad"} className="h-full max-lg:h-auto">
           <Variabilidad activa={activa && modo === "variabilidad"} />
         </div>
-        <div hidden={modo !== "estructuradas"} className="h-full">
+        <div hidden={modo !== "estructuradas"} className="h-full max-lg:h-auto">
           <Estructuradas activa={activa && modo === "estructuradas"} />
         </div>
       </div>

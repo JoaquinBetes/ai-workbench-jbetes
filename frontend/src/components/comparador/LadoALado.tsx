@@ -1,4 +1,3 @@
-import { Columns3 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { streamChat, type ChatMessage, type ModelInfo, type Stats, type TokenLogprob } from "../../lib/api";
 import { escribiendo, useComandos } from "../../lib/comandos";
@@ -9,9 +8,11 @@ import InspectorToken from "../playground/InspectorToken";
 import TextoTokens from "../playground/TextoTokens";
 import { Deslizador, Interruptor, Seccion } from "../ui/Controles";
 import { BarraVram } from "../ui/SelectorModelo";
+import { escenaToro } from "../../lib/ascii";
+import { Giro } from "../ascii/Texto";
 import { Vacio } from "../ui/Vista";
 import { BotonCorrer, CampoPrompt, Estado, PanelConfig, SERIES, SERIES_HEX } from "./comun";
-import GraficosResumen, { type FilaResumen } from "./GraficosResumen";
+import ResumenModelos3D, { type FilaResumen } from "./ResumenModelos3D";
 
 const MAX_MODELOS = 4;
 
@@ -170,6 +171,7 @@ export default function LadoALado({ activa = true }: { activa?: boolean }) {
       return {
         modelo: c.modelo.name,
         color: SERIES_HEX[c.slot],
+        tokens: c.tokens,
         tokS: c.stats?.tokens_per_second ?? null,
         carga: c.stats?.load_s ?? null,
         perplejidad: m?.perplejidad ?? null,
@@ -181,7 +183,7 @@ export default function LadoALado({ activa = true }: { activa?: boolean }) {
   const ordenados = [...modelos].sort((a, b) => parametrosEnNumero(a.parameters) - parametrosEnNumero(b.parameters));
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[18.5rem_minmax(0,1fr)_21rem] gap-3">
+    <div className="grid h-full min-h-0 grid-cols-[18.5rem_minmax(0,1fr)_21rem] gap-3 max-xl:grid-cols-[17rem_minmax(0,1fr)] max-lg:h-auto max-lg:grid-cols-1">
       <PanelConfig
         meta={`${elegidos.length} de ${MAX_MODELOS} modelos`}
         pie={
@@ -209,12 +211,12 @@ export default function LadoALado({ activa = true }: { activa?: boolean }) {
                     aria-pressed={activo}
                     disabled={lleno}
                     onClick={() => alternar(m.name)}
-                    className={`flex w-full items-center gap-2.5 rounded-md border px-2.5 py-2 text-left transition-colors ${
+                    className={`flex w-full items-center gap-2.5 border px-2.5 py-2 text-left transition-colors ${
                       activo ? "border-line-2 bg-raised" : "border-transparent hover:bg-raised"
                     } disabled:opacity-40`}
                   >
                     <span
-                      className="h-2.5 w-2.5 flex-none rounded-[3px] border"
+                      className="h-2.5 w-2.5 flex-none border"
                       style={activo ? { background: SERIES[slot], borderColor: "transparent" } : { borderColor: "var(--line-2)" }}
                       aria-hidden
                     />
@@ -255,16 +257,16 @@ export default function LadoALado({ activa = true }: { activa?: boolean }) {
         </Seccion>
       </PanelConfig>
 
-      <section className="min-h-0 space-y-3 overflow-y-auto pr-1" aria-label="Resultados">
+      <section className="min-h-0 space-y-3 overflow-y-auto pr-1 max-lg:overflow-visible max-lg:pr-0" aria-label="Resultados">
         {columnas.length === 0 ? (
           <div className="panel h-full">
-            <Vacio icono={<Columns3 />} titulo="Elegí modelos y escribí un prompt">
+            <Vacio escena={escenaToro} etiquetaEscena="Un toro que gira, dibujado con caracteres" titulo="Elegí modelos y escribí un prompt">
               Cada modelo responde en su columna, con su velocidad, el tiempo de carga y qué tan seguro estuvo.
             </Vacio>
           </div>
         ) : (
           <>
-            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${columnas.length}, minmax(0, 1fr))` }}>
+            <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, 230px), 1fr))` }}>
               {columnas.map((c, i) => {
                 const m = metricas(c.tokens);
                 return (
@@ -308,7 +310,7 @@ export default function LadoALado({ activa = true }: { activa?: boolean }) {
                         />
                       ) : (
                         <span className="flex items-center gap-2 text-label text-muted">
-                          {c.estado === "generando" && <span className="spin" aria-hidden />}
+                          {c.estado === "generando" && <Giro />}
                           {c.estado === "generando" ? "Cargando el modelo en la GPU…" : c.estado === "esperando" ? "Espera su turno" : ""}
                         </span>
                       )}
@@ -329,17 +331,17 @@ export default function LadoALado({ activa = true }: { activa?: boolean }) {
                 );
               })}
             </div>
-            {resumen.length >= 2 && !corriendo && <GraficosResumen filas={resumen} />}
+            {resumen.length >= 2 && !corriendo && <ResumenModelos3D filas={resumen} />}
           </>
         )}
       </section>
 
-      <aside className="panel enter flex min-h-0 flex-col" style={{ ["--delay" as string]: "120ms" }} aria-label="Inspector">
+      <aside className="panel enter flex min-h-0 flex-col max-xl:col-span-2 max-xl:max-h-[480px] max-lg:col-span-1" style={{ ["--delay" as string]: "120ms" }} aria-label="Inspector">
         <div className="panel-head">
           <span className="panel-title">Inspector</span>
           {colSel && (
             <span className="ml-auto flex min-w-0 items-center gap-2">
-              <span className="h-2 w-2 flex-none rounded-[2px]" style={{ background: SERIES[colSel.slot] }} aria-hidden />
+              <span className="h-2 w-2 flex-none" style={{ background: SERIES[colSel.slot] }} aria-hidden />
               <span className="mono truncate text-label text-muted">{colSel.modelo.name}</span>
             </span>
           )}
