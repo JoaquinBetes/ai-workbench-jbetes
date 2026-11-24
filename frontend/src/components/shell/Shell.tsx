@@ -1,4 +1,4 @@
-import { Columns3, Command, FlaskConical, MessageSquareText, Pause, Play, Search } from "lucide-react";
+import { Columns3, Command, FlaskConical, MessageSquareText, Pause, Play, Search, Target } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useListaComandos, type Comando } from "../../lib/comandos";
 import { entero, num, segundos } from "../../lib/formato";
@@ -8,17 +8,19 @@ import { Teclas } from "../ui/Controles";
 import Segmentado from "../ui/Segmentado";
 import { movimiento, useMovimiento } from "../../lib/movimiento";
 
-export type IdVista = "playground" | "comparador" | "chat";
+export type IdVista = "playground" | "comparador" | "evaluacion" | "chat";
 
 export const VISTAS: { id: IdVista; nombre: string; capitulo: string | null; tecla: string }[] = [
   { id: "playground", nombre: "Playground", capitulo: "Cap. 2", tecla: "1" },
   { id: "comparador", nombre: "Comparador", capitulo: "Cap. 2", tecla: "2" },
-  { id: "chat", nombre: "Chat", capitulo: null, tecla: "3" },
+  { id: "evaluacion", nombre: "Evaluación", capitulo: "Cap. 3", tecla: "3" },
+  { id: "chat", nombre: "Chat", capitulo: null, tecla: "4" },
 ];
 
 const ICONOS: Record<IdVista, typeof FlaskConical> = {
   playground: FlaskConical,
   comparador: Columns3,
+  evaluacion: Target,
   chat: MessageSquareText,
 };
 
@@ -82,7 +84,8 @@ export function BarraSuperior({
           const Icono = ICONOS[v.id];
           return {
             valor: v.id,
-            etiqueta: v.nombre,
+            // En el teléfono, solo la vista actual muestra su nombre (las otras, el ícono).
+            etiqueta: <span className={v.id === vista ? undefined : "max-sm:sr-only"}>{v.nombre}</span>,
             icono: <Icono aria-hidden />,
             tip: `Alt ${v.tecla}`,
           };
@@ -292,7 +295,8 @@ const ATAJOS: { grupo: string; filas: [string[], string][] }[] = [
       [["Ctrl", "K"], "Abrir la paleta de comandos"],
       [["Alt", "1"], "Ir al Playground"],
       [["Alt", "2"], "Ir al Comparador"],
-      [["Alt", "3"], "Ir al Chat"],
+      [["Alt", "3"], "Ir a Evaluación"],
+      [["Alt", "4"], "Ir al Chat"],
       [["/"], "Escribir en el prompt de la vista"],
       [["?"], "Ver esta lista"],
     ],

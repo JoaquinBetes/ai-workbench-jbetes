@@ -97,7 +97,8 @@ Tres voces, cada una con un trabajo:
 | Interfaz | IBM Plex Mono 400/500/600 | Etiquetas, botones, pestañas, números tabulares (`.num`), código, JSON |
 | Prosa | IBM Plex Sans 400/500 (`.prosa`) | Lo que escribe el modelo, mensajes, campos de prompt, ayudas (`.hint`) |
 
-- La prosa no va en monoespaciada: en párrafos se lee más lento.
+- La prosa no va en monoespaciada: en párrafos se lee más lento. Un campo de prosa es
+  `field prosa` (`.field.prosa` gana sobre la mono de `.field`).
 - Texto del modelo: 16 px, interlínea 1,7, largo de línea de 68 caracteres como máximo (el
   rango cómodo es de 50 a 75).
 - Escala de interfaz: 12 / 13 / 14 / 15 / 16 px. Títulos de panel: Plex Mono 12 px, versalitas,
@@ -115,7 +116,8 @@ Tres voces, cada una con un trabajo:
 - Las zonas de lectura tapan la placa del fondo: carril en el chat (`.carril`), velo en la
   columna central del playground (`.carril-suave`).
 - En teléfono el compositor queda fijo abajo, los ejemplos van en una sola fila y se esconden
-  cuando ya escribiste algo.
+  cuando ya escribiste algo. En la barra de vistas, solo la actual muestra su nombre; las otras,
+  el ícono (el nombre sigue para lectores de pantalla).
 - Sin scroll lateral a 390 ni a 320 px (los tooltips no existen sin mouse).
 
 ## Superficies
@@ -167,7 +169,8 @@ Tres voces, cada una con un trabajo:
 - Escenas: placa de fondo con pulsos (`crearEscenaFondo`), chip SAMPLER con tokens que salen
   (`crearEscenaChip`), globo de ciberespacio (`escenaGlobo`), ojo tramado que sigue al puntero
   (`escenaOjo`), toro de Sloane (`escenaToro`), lluvia de muestras (`escenaMuestras`), cubo
-  (`escenaCubo`). Cada estado vacío lleva una, con su descripción para lectores de pantalla.
+  (`escenaCubo`), diana con dardos para la evaluación (`escenaDiana`). Cada estado vacío lleva una,
+  con su descripción para lectores de pantalla.
 - La placa del fondo es calma: ~9 % de la pantalla con pistas, pocas señales de ambiente; los
   pulsos fuertes son los de los tokens. Se puede ocultar del todo desde la paleta.
 
@@ -176,10 +179,17 @@ Tres voces, cada una con un trabajo:
 - **Si un gráfico puede ser tridimensional, es 3D e interactivo: se gira y se acerca con el mouse.**
   Por qué: el dueño pidió gráficos como la cordillera que mandó de referencia, en 3D.
   <!-- 2026-11-23: "me gustaría ver si podemos agregar gráficos como este que estoy cargando, que es como en 3D" / "quiero que haya muchos gráficos que tengan cierto componente interactivo, de ser posible que sean tridimensionales" -->
-- `components/graficos3d/`: `Cordillera3D` y `Barras3D`. React Three Fiber, cámara ortográfica
-  que encuadra sola, vaivén suave (se detiene con el movimiento en pausa), giro limitado. Cada uno
-  tiene un modo ASCII. El contenedor es un grupo con nombre (`role="group"`), no una imagen:
-  adentro hay controles.
+- `components/graficos3d/`: `Cordillera3D`, `Barras3D` y `Nube3D`. React Three Fiber, cámara
+  ortográfica que encuadra sola, vaivén suave (se detiene con el movimiento en pausa), giro
+  limitado. Cada uno tiene un modo ASCII. El contenedor es un grupo con nombre (`role="group"`),
+  no una imagen: adentro hay controles.
+- Las etiquetas dentro de una escena 3D se ponen con `Etiqueta` (de `Lienzo3D`), nunca con el
+  `Html` de drei directo: `Etiqueta` las cuelga de una capa fija del lienzo. Con `Html` suelto,
+  desmontar el gráfico tira un error de React (`removeChild`) en la consola.
+- Nube de embeddings (`Nube3D`): referencias como cubos en serigrafía, respuestas como esferas del
+  color de su modelo, unidas a su referencia por una línea; cuanto más corta, más se parecen.
+- Dispersiones: un punto por respuesta, un color por modelo, leyenda arriba; las dos esquinas que
+  importan llevan su nombre en el gráfico.
 - Ejes recesivos (`EJE`, `GRILLA` en `ui/Vista.tsx`) en Plex Mono 12 px; el texto en tokens de
   texto, nunca en el color de la serie.
 - En listas cortas, barras de texto `###` con un trazo punteado dibujado para lo vacío
@@ -192,10 +202,16 @@ Tres voces, cada una con un trabajo:
 - Objetivos: 24 px como mínimo (WCAG 2.5.8); en pantallas táctiles, 44 px.
 - Campos: borde de 3,6:1, etiqueta visible y asociada (`<label for>`), 16 px en pantallas
   táctiles (así iOS no hace zoom al enfocar).
-- Atajos: `Ctrl K` paleta, `Alt 1/2/3` vistas, `/` al campo, `← →` tokens, `1…9` forzar
+- Atajos: `Ctrl K` paleta, `Alt 1/2/3/4` vistas, `/` al campo, `← →` tokens, `1…9` forzar
   alternativa, `Esc` detener, `?` lista de atajos. Las pistas de teclado se esconden en pantallas
   táctiles (`.solo-teclado`).
 - Las zonas con scroll propio se pueden enfocar con el teclado (`tabIndex={0}` y un nombre).
+  Las tablas anchas van en un envoltorio `relative overflow-x-auto`: sin `relative`, un `.sr-only`
+  de adentro se escapa y la página entera scrollea de costado.
+- Casillas: `.check` dentro de `.area-check` (la casilla mide 16 px; el área que se toca, 28, y
+  44 en pantallas táctiles).
+- Borrar algo guardado pide una segunda confirmación en el mismo lugar (el botón pasa a "Borrar"
+  en rojo y se cancela al perder el foco); sin diálogos del navegador.
 - Un `.tag` no lleva tooltip: los dos usan `::after`. El tooltip va en un envoltorio.
 
 ## Texto

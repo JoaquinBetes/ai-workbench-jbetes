@@ -1,0 +1,47 @@
+{
+  "slug": "cuentas",
+  "nombre": "Cuentas",
+  "descripcion": "Aritmética y problemas cortos; la referencia es solo el número.",
+  "casos": [
+    {
+      "pregunta": "¿Cuánto es 17 × 23?",
+      "referencia": "391"
+    },
+    {
+      "pregunta": "¿Cuánto es 1024 dividido 16?",
+      "referencia": "64"
+    },
+    {
+      "pregunta": "Un tren recorre 180 km en 2 horas. ¿Cuál es su velocidad media en km/h?",
+      "referencia": "90"
+    },
+    {
+      "pregunta": "¿Cuánto es el 15 % de 240?",
+      "referencia": "36"
+    },
+    {
+      "pregunta": "¿Cuál es la raíz cuadrada de 169?",
+      "referencia": "13"
+    },
+    {
+      "pregunta": "Tengo 3 cajas con 12 manzanas cada una y regalo 7. ¿Cuántas me quedan?",
+      "referencia": "29"
+    },
+    {
+      "pregunta": "¿Cuánto es 2 elevado a la 10?",
+      "referencia": "1024"
+    },
+    {
+      "pregunta": "¿Cuántos minutos hay en 3 horas y media?",
+      "referencia": "210"
+    },
+    {
+      "pregunta": "Un producto cuesta 800 pesos y tiene un 25 % de descuento. ¿Cuánto se paga?",
+      "referencia": "600"
+    },
+    {
+      "pregunta": "¿Cuánto es 7 + 8 × 2?",
+      "referencia": "23"
+    }
+  ]
+}

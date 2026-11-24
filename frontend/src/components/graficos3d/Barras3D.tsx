@@ -1,6 +1,6 @@
-import { Edges, Html } from "@react-three/drei";
+import { Edges } from "@react-three/drei";
 import { useState } from "react";
-import Lienzo3D from "./Lienzo3D";
+import Lienzo3D, { Etiqueta } from "./Lienzo3D";
 import { TINTA } from "../../lib/tintas";
 
 export type SerieBarras = { etiqueta: string; color: string };
@@ -80,21 +80,21 @@ export default function Barras3D({
           }),
         )}
         {columnas.map((c, x) => (
-          <Html key={`cx${c}`} position={[x * PASO_X, 0, fondo + 1.05]} center>
+          <Etiqueta key={`cx${c}`} position={[x * PASO_X, 0, fondo + 1.05]} center>
             <span className="eje3d">{c}</span>
-          </Html>
+          </Etiqueta>
         ))}
         {series.map((s, z) => (
-          <Html key={`sz${s.etiqueta}`} position={[ancho + 1.1, 0, z * PASO_Z]} center>
+          <Etiqueta key={`sz${s.etiqueta}`} position={[ancho + 1.1, 0, z * PASO_Z]} center>
             <span className="eje3d" style={{ color: s.color }}>
               ■ {s.etiqueta}
             </span>
-          </Html>
+          </Etiqueta>
         ))}
         {sobre && (
-          <Html position={[sobre[1] * PASO_X, (valores[sobre[0]][sobre[1]] ?? 0) * ALTO + 0.5, sobre[0] * PASO_Z]} center zIndexRange={[40, 0]}>
+          <Etiqueta position={[sobre[1] * PASO_X, (valores[sobre[0]][sobre[1]] ?? 0) * ALTO + 0.5, sobre[0] * PASO_Z]} center zIndexRange={[40, 0]}>
             <span className="tip3d">{textos[sobre[0]]?.[sobre[1]]}</span>
-          </Html>
+          </Etiqueta>
         )}
       </group>
     </Lienzo3D>

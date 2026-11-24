@@ -11,15 +11,21 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from ollama import AsyncClient
+from sqlalchemy import text
 
 from .config import settings
-from .routers import chat, models, structured
+from .db import motor
+from .eval.arranque import preparar_base
+from .routers import chat, evaluacion, models, structured
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.ollama = AsyncClient(host=settings.ollama_host)  # un cliente para toda la app
+    if settings.migrar_al_iniciar:
+        await preparar_base()  # migraciones + conjuntos curados; si no hay base, la app igual arranca
     yield
+    await motor.dispose()
 
 
 app = FastAPI(title="AI Workbench JBetes", version="0.1.0", lifespan=lifespan)
@@ -27,6 +33,7 @@ app = FastAPI(title="AI Workbench JBetes", version="0.1.0", lifespan=lifespan)
 app.include_router(models.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(structured.router, prefix="/api")
+app.include_router(evaluacion.router, prefix="/api")
 
 
 @app.get("/api/health", tags=["sistema"])
@@ -39,7 +46,13 @@ async def health():
         ollama = {"ok": True, "host": settings.ollama_host, "version": r.json().get("version")}
     except Exception as e:
         ollama = {"ok": False, "host": settings.ollama_host, "error": str(e)}
-    return {"status": "ok", "ollama": ollama}
+    try:
+        async with motor.connect() as conexion:
+            await conexion.execute(text("select 1"))
+        db = {"ok": True}
+    except Exception as e:
+        db = {"ok": False, "error": str(e)}
+    return {"status": "ok", "ollama": ollama, "db": db, "modelo_embeddings": settings.modelo_embeddings}
 
 
 # --- Frontend compilado (solo existe dentro de la imagen de Docker) -----------

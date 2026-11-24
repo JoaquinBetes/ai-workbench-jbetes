@@ -13,6 +13,8 @@ WORKDIR /app
 COPY backend/pyproject.toml ./
 RUN uv pip install --system --no-cache -r pyproject.toml
 COPY backend/app ./app
+COPY backend/alembic.ini ./
+COPY backend/migrations ./migrations
 COPY --from=frontend /frontend/dist ./static
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

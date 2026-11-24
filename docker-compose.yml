@@ -7,6 +7,33 @@ services:
     environment:
       # Ollama corre directo en el servidor (fuera de Docker)
       - OLLAMA_HOST=http://host.docker.internal:11434
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-workbench}:${POSTGRES_PASSWORD:-workbench}@db:5432/${POSTGRES_DB:-workbench}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
+
+  # Postgres con pgvector: conjuntos de casos, corridas de evaluación y embeddings
+  # (y, más adelante, los documentos del RAG del capítulo 6).
+  db:
+    image: pgvector/pgvector:pg18
+    container_name: ai-workbench-db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-workbench}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-workbench}
+      - POSTGRES_DB=${POSTGRES_DB:-workbench}
+    ports:
+      - "127.0.0.1:5432:5432"   # solo desde el servidor (para desarrollar fuera de Docker)
+    volumes:
+      - datos-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  datos-db:

@@ -1,0 +1,47 @@
+{
+  "slug": "traduccion",
+  "nombre": "Traducción al inglés",
+  "descripcion": "Oraciones cortas; muchas traducciones correctas no coinciden palabra por palabra con la referencia.",
+  "casos": [
+    {
+      "pregunta": "Traducí al inglés: El gato duerme en el sofá.",
+      "referencia": "The cat sleeps on the sofa."
+    },
+    {
+      "pregunta": "Traducí al inglés: Mañana va a llover.",
+      "referencia": "It will rain tomorrow."
+    },
+    {
+      "pregunta": "Traducí al inglés: ¿Dónde está la estación de tren?",
+      "referencia": "Where is the train station?"
+    },
+    {
+      "pregunta": "Traducí al inglés: Me gusta leer libros de historia.",
+      "referencia": "I like reading history books."
+    },
+    {
+      "pregunta": "Traducí al inglés: Ella trabaja en un hospital.",
+      "referencia": "She works in a hospital."
+    },
+    {
+      "pregunta": "Traducí al inglés: Necesitamos comprar pan y leche.",
+      "referencia": "We need to buy bread and milk."
+    },
+    {
+      "pregunta": "Traducí al inglés: El concierto empieza a las ocho.",
+      "referencia": "The concert starts at eight."
+    },
+    {
+      "pregunta": "Traducí al inglés: No entiendo esta pregunta.",
+      "referencia": "I don't understand this question."
+    },
+    {
+      "pregunta": "Traducí al inglés: Mi hermano vive en Córdoba.",
+      "referencia": "My brother lives in Córdoba."
+    },
+    {
+      "pregunta": "Traducí al inglés: Hoy hace mucho frío.",
+      "referencia": "It is very cold today."
+    }
+  ]
+}
