@@ -167,7 +167,7 @@ class Armador {
       glifos,
       vel: 6 + this.r() * 10,
       fase: this.r() * 200,
-      ambiente: this.r() < 0.3,
+      ambiente: this.r() < 0.16,
       sentido: 1,
     };
     this.pistas.push(pista);
@@ -180,19 +180,19 @@ class Armador {
     for (let i = 0; i < w; i++) {
       const borde = i === 0 || i === w - 1;
       const pin = !borde && i % 2 === 1;
-      this.fijo(x + i, y, i === 0 ? b.a : i === w - 1 ? b.b : pin ? "┴" : b.h, 0.55, "pista");
-      this.fijo(x + i, y + h - 1, i === 0 ? b.c : i === w - 1 ? b.d : pin ? "┬" : b.h, 0.55, "pista");
+      this.fijo(x + i, y, i === 0 ? b.a : i === w - 1 ? b.b : pin ? "┴" : b.h, 0.45, "pista");
+      this.fijo(x + i, y + h - 1, i === 0 ? b.c : i === w - 1 ? b.d : pin ? "┬" : b.h, 0.45, "pista");
       if (pin) {
         pines.push({ x: x + i, y: y - 1, dir: 0 });
         pines.push({ x: x + i, y: y + h, dir: 2 });
       }
     }
     for (let j = 1; j < h - 1; j++) {
-      this.fijo(x, y + j, b.v, 0.55, "pista");
-      this.fijo(x + w - 1, y + j, b.v, 0.55, "pista");
+      this.fijo(x, y + j, b.v, 0.45, "pista");
+      this.fijo(x + w - 1, y + j, b.v, 0.45, "pista");
     }
-    this.texto(x + Math.floor((w - nombre.length) / 2), y + Math.floor(h / 2), nombre, 0.5, "silk");
-    this.fijo(x + 1, y + 1, "•", 0.5, "silk"); // marca del pin 1
+    this.texto(x + Math.floor((w - nombre.length) / 2), y + Math.floor(h / 2), nombre, 0.32, "silk");
+    this.fijo(x + 1, y + 1, "•", 0.32, "silk"); // marca del pin 1
     this.marcar(x - 1, y - 1, w + 2, h + 2);
     for (const p of pines) this.ocupado[p.y * this.cols + p.x] = 0;
     return pines;
@@ -208,7 +208,7 @@ function armarFondo(cols: number, rows: number): Placa {
   const r = azar(cols * 7919 + rows * 104729);
   const a = new Armador(cols, rows, r);
   // chips: uno cada ~2600 celdas, con pistas que salen de cada pin
-  const nChips = Math.max(1, Math.min(7, Math.floor((cols * rows) / 2600)));
+  const nChips = Math.max(1, Math.min(5, Math.floor((cols * rows) / 3400)));
   for (let k = 0, intentos = 0; k < nChips && intentos < 60; intentos++) {
     const nombre = NOMBRES[Math.floor(r() * NOMBRES.length)];
     const w = Math.max(nombre.length + 4, 11 + Math.floor(r() * 8)) | 1;
@@ -236,8 +236,8 @@ function armarFondo(cols: number, rows: number): Placa {
       a.trazar(x0, y0 + j, 1, { segmentos: [[1, giro], [baja ? 2 : 0, l2 + (baja ? j : n - 1 - j)], [1, 6 + Math.floor(r() * 10)]], minimo: 4 });
     }
   }
-  // pistas sueltas hasta cubrir ~13 % de la placa
-  const meta = cols * rows * 0.13;
+  // pistas sueltas hasta cubrir ~9 % de la placa: que se lea como placa, no como ruido
+  const meta = cols * rows * 0.09;
   let cubierto = 0;
   for (let intentos = 0; intentos < 900 && cubierto < meta; intentos++) {
     const x = Math.floor(r() * cols), y = Math.floor(r() * rows);
@@ -262,7 +262,7 @@ function dibujarPlaca(
       poner(x, y, p.glifos[k], o.base, "pista");
       if (puntero) {
         const d = Math.hypot((x - px) * aspecto, y - py);
-        if (d < o.radio) poner(x, y, p.glifos[k], (1 - d / o.radio) * 0.55, "muted");
+        if (d < o.radio) poner(x, y, p.glifos[k], (1 - d / o.radio) * 0.35, "muted");
       }
     }
   }
@@ -277,7 +277,7 @@ function dibujarPlaca(
   for (const p of placa.pistas) {
     if (!p.ambiente) continue;
     const ciclo = p.celdas.length + 40;
-    cola(p, (t * p.vel + p.fase) % ciclo, 0.55);
+    cola(p, (t * p.vel + p.fase) % ciclo, 0.45);
   }
   if (!placa.pistas.length) return;
   for (const ts of pulsosRecientes(ahora, 4000)) {
@@ -299,7 +299,7 @@ export function crearEscenaFondo(): Escena {
   let placa: Placa | null = null;
   return (c) => {
     if (!placa || placa.cols !== c.cols || placa.rows !== c.rows) placa = armarFondo(c.cols, c.rows);
-    dibujarPlaca(placa, c, { base: 0.42, radio: 11, velToken: 34 });
+    dibujarPlaca(placa, c, { base: 0.3, radio: 9, velToken: 34 });
   };
 }
 
