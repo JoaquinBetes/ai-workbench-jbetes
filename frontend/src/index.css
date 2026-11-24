@@ -252,6 +252,7 @@
   /* foco de campo: el borde se vuelve doble y encendido; sin halo */
   .field:focus { outline: none; border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .field--mono { font-size: var(--t-label); }
+  .field.prosa { font-family: var(--font-prose); }   /* .field fija la mono; un campo de prosa la cambia (DESIGN.md) */
   .field[aria-invalid="true"] { border-color: var(--danger); }
   textarea.field { resize: vertical; }
 
