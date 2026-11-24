@@ -13,9 +13,9 @@ export function BarraVram({ gb }: { gb: number }) {
   const x = Math.min(gb / VRAM_UTIL_GB, 1);
   const justo = gb > VRAM_UTIL_GB * 0.85;
   return (
-    <span className="relative block h-[3px] w-14 overflow-hidden rounded-full bg-line-2" aria-hidden>
+    <span className="relative block h-[3px] w-14 overflow-hidden bg-line-2" aria-hidden>
       <span
-        className="absolute inset-y-0 left-0 rounded-full"
+        className="absolute inset-y-0 left-0"
         style={{ width: `${x * 100}%`, background: justo ? "var(--doubt)" : "var(--accent)" }}
       />
     </span>

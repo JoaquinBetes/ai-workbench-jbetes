@@ -23,10 +23,11 @@ export function Interruptor({
         type="button"
         role="switch"
         aria-checked={valor}
+        aria-labelledby={`${id}-l`}
         className="switch"
         onClick={() => onChange(!valor)}
       />
-      <label htmlFor={id} className="flex-1 cursor-pointer select-none text-label text-ink-2">
+      <label id={`${id}-l`} htmlFor={id} className="flex-1 cursor-pointer select-none text-label text-ink-2">
         {children}
       </label>
       {detalle}
@@ -86,11 +87,17 @@ export function Deslizador({
 }
 
 /** Encabezado de una sección dentro de un panel. */
-export function Seccion({ titulo, extra, children }: { titulo: string; extra?: ReactNode; children: ReactNode }) {
+export function Seccion({ titulo, extra, children, para }: { titulo: string; extra?: ReactNode; children: ReactNode; para?: string }) {
   return (
     <section className="space-y-3 px-4 py-4">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="panel-title">{titulo}</h3>
+        {para ? (
+          <label htmlFor={para} className="panel-title">
+            {titulo}
+          </label>
+        ) : (
+          <h2 className="panel-title">{titulo}</h2>
+        )}
         {extra}
       </div>
       {children}
