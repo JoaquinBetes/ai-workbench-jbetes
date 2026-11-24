@@ -1,8 +1,8 @@
-import { Html, Line } from "@react-three/drei";
+import { Line } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useMemo, useState } from "react";
 import { BufferAttribute, Color, DoubleSide, Shape, ShapeGeometry } from "three";
-import Lienzo3D from "./Lienzo3D";
+import Lienzo3D, { Etiqueta } from "./Lienzo3D";
 import { TINTA } from "../../lib/tintas";
 
 export type FilaCordillera = {
@@ -159,20 +159,20 @@ export default function Cordillera3D({
             />
           ))}
           {ejeX.map((e, i) => (
-            <Html key={`x${i}`} position={[-ANCHO / 2 + (i * ANCHO) / Math.max(1, ejeX.length - 1), 0, -z0 + 0.9]} center>
+            <Etiqueta key={`x${i}`} position={[-ANCHO / 2 + (i * ANCHO) / Math.max(1, ejeX.length - 1), 0, -z0 + 0.9]} center>
               <span className="eje3d">{e}</span>
-            </Html>
+            </Etiqueta>
           ))}
-          <Html position={[ANCHO / 2 + 0.9, 0, z0]} center>
+          <Etiqueta position={[ANCHO / 2 + 0.9, 0, z0]} center>
             <span className="eje3d">{ejeZ[0]}</span>
-          </Html>
-          <Html position={[ANCHO / 2 + 0.9, 0, -z0]} center>
+          </Etiqueta>
+          <Etiqueta position={[ANCHO / 2 + 0.9, 0, -z0]} center>
             <span className="eje3d">{ejeZ[1]}</span>
-          </Html>
+          </Etiqueta>
           {hover && sobre !== null && (
-            <Html position={[0, ALTO + 0.4, n > 1 ? z0 + sobre * dz : 0]} center zIndexRange={[40, 0]}>
+            <Etiqueta position={[0, ALTO + 0.4, n > 1 ? z0 + sobre * dz : 0]} center zIndexRange={[40, 0]}>
               <span className="tip3d">{hover.etiqueta}</span>
-            </Html>
+            </Etiqueta>
           )}
         </group>
       )}

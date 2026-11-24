@@ -1,8 +1,8 @@
-import { OrbitControls } from "@react-three/drei";
+import { Html, OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { EffectComposer } from "@react-three/postprocessing";
 import { Effect } from "postprocessing";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ComponentProps, type ReactNode, type RefObject } from "react";
 import { CanvasTexture, Group, NearestFilter, OrthographicCamera, RepeatWrapping, Uniform } from "three";
 import { useMovimiento } from "../../lib/movimiento";
 
@@ -62,6 +62,18 @@ function Ascii({ celda }: { celda: number }) {
   const efecto = useMemo(() => new EfectoAscii(celda), [celda]);
   useEffect(() => () => efecto.dispose(), [efecto]);
   return <primitive object={efecto} dispose={null} />;
+}
+
+// Las etiquetas HTML van a una capa propia, fija desde el primer render. Si no,
+// drei las cuelga primero del contenedor del canvas y después (cuando se
+// conectan los eventos) de otro elemento: quedan dos raíces de React sobre el
+// mismo nodo y, al desmontar el gráfico, React tira "removeChild" en consola.
+const CapaEtiquetas = createContext<RefObject<HTMLDivElement | null> | null>(null);
+
+/** Una etiqueta HTML pegada a un punto de la escena (Html de drei, en la capa del lienzo). */
+export function Etiqueta(props: ComponentProps<typeof Html>) {
+  const capa = useContext(CapaEtiquetas);
+  return <Html {...props} portal={(capa ?? undefined) as RefObject<HTMLElement> | undefined} />;
 }
 
 /** Re-dibuja cuando cambia algo de afuera (los datos) en modo "a demanda". */
@@ -125,6 +137,7 @@ export default function Lienzo3D({
   const [visible, setVisible] = useState(true);
   const [tocando, setTocando] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
+  const capa = useRef<HTMLDivElement>(null);
   const quieto = !useMovimiento();
 
   useEffect(() => {
@@ -136,40 +149,43 @@ export default function Lienzo3D({
 
   return (
     <div ref={caja} className="relative" style={{ height: alto }} role="group" aria-label={titulo}>
-      <Canvas
-        orthographic
-        camera={{ position: posicion, zoom: 40, near: 0.1, far: 200 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
-        frameloop={!visible ? "never" : quieto ? "demand" : "always"}
-        onPointerDown={() => setTocando(true)}
-        onPointerUp={() => setTocando(false)}
-        onPointerLeave={() => setTocando(false)}
-      >
-        <ambientLight intensity={0.55} />
-        <directionalLight position={[6, 10, 4]} intensity={1.6} />
-        <directionalLight position={[-6, 4, -4]} intensity={0.35} />
-        <Invalidar firma={`${firma}|${ascii}`} />
-        <Encuadre ancho={escena[0]} alto={escena[1]} />
-        <Vaiven activo={!quieto && !tocando}>{typeof children === "function" ? children(ascii) : children}</Vaiven>
-        <OrbitControls
-          makeDefault
-          enablePan={false}
-          enableDamping
-          dampingFactor={0.12}
-          minZoom={10}
-          maxZoom={200}
-          minPolarAngle={0.2}
-          maxPolarAngle={Math.PI / 2.1}
-          minAzimuthAngle={-1.2}
-          maxAzimuthAngle={1.2}
-        />
-        {ascii && (
-          <EffectComposer multisampling={0}>
-            <Ascii celda={8} />
-          </EffectComposer>
-        )}
-      </Canvas>
+      <CapaEtiquetas.Provider value={capa}>
+        <Canvas
+          orthographic
+          camera={{ position: posicion, zoom: 40, near: 0.1, far: 200 }}
+          dpr={[1, 2]}
+          gl={{ antialias: true, alpha: true, preserveDrawingBuffer: false }}
+          frameloop={!visible ? "never" : quieto ? "demand" : "always"}
+          onPointerDown={() => setTocando(true)}
+          onPointerUp={() => setTocando(false)}
+          onPointerLeave={() => setTocando(false)}
+        >
+          <ambientLight intensity={0.55} />
+          <directionalLight position={[6, 10, 4]} intensity={1.6} />
+          <directionalLight position={[-6, 4, -4]} intensity={0.35} />
+          <Invalidar firma={`${firma}|${ascii}`} />
+          <Encuadre ancho={escena[0]} alto={escena[1]} />
+          <Vaiven activo={!quieto && !tocando}>{typeof children === "function" ? children(ascii) : children}</Vaiven>
+          <OrbitControls
+            makeDefault
+            enablePan={false}
+            enableDamping
+            dampingFactor={0.12}
+            minZoom={10}
+            maxZoom={200}
+            minPolarAngle={0.2}
+            maxPolarAngle={Math.PI / 2.1}
+            minAzimuthAngle={-1.2}
+            maxAzimuthAngle={1.2}
+          />
+          {ascii && (
+            <EffectComposer multisampling={0}>
+              <Ascii celda={8} />
+            </EffectComposer>
+          )}
+        </Canvas>
+      </CapaEtiquetas.Provider>
+      <div ref={capa} className="pointer-events-none absolute inset-0 isolate overflow-hidden" />
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-2">
         <span className="label">arrastrá para girar · rueda para acercar</span>
         <span className="pointer-events-auto flex items-center gap-2">
