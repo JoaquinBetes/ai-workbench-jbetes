@@ -4,6 +4,7 @@ import { Giro } from "../ascii/Texto";
 // three.js pesa: los gráficos 3D se cargan recién cuando hacen falta.
 const CordilleraDiferida = lazy(() => import("./Cordillera3D"));
 const BarrasDiferidas = lazy(() => import("./Barras3D"));
+const NubeDiferida = lazy(() => import("./Nube3D"));
 
 function Cargando({ alto = 300 }: { alto?: number }) {
   return (
@@ -25,6 +26,14 @@ export function Barras(props: ComponentProps<typeof BarrasDiferidas>) {
   return (
     <Suspense fallback={<Cargando alto={props.alto} />}>
       <BarrasDiferidas {...props} />
+    </Suspense>
+  );
+}
+
+export function Nube(props: ComponentProps<typeof NubeDiferida>) {
+  return (
+    <Suspense fallback={<Cargando alto={props.alto} />}>
+      <NubeDiferida {...props} />
     </Suspense>
   );
 }
