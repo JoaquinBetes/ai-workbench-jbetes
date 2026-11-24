@@ -21,21 +21,34 @@ const ICONOS: Record<IdVista, typeof FlaskConical> = {
   chat: MessageSquareText,
 };
 
+/** Ícono de la marca: un chip visto desde arriba, con sus pines. */
+function Chip() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden className="flex-none text-accent">
+      <rect x="5" y="5" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="8.5" y="8.5" width="5" height="5" fill="currentColor" />
+      {[7.5, 11, 14.5].map((p) => (
+        <g key={p} stroke="currentColor" strokeWidth="1.5">
+          <line x1={p} y1="1" x2={p} y2="5" />
+          <line x1={p} y1="17" x2={p} y2="21" />
+          <line x1="1" y1={p} x2="5" y2={p} />
+          <line x1="17" y1={p} x2="21" y2={p} />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 /**
- * La marca: un sello bermellón (hanko) con el carácter 工, "obra / taller".
- * Mientras el modelo genera, al lado gira un indicador de texto.
+ * La marca: un chip y el nombre en letra de terminal. Mientras el modelo
+ * genera, al lado gira un indicador de texto.
  */
 export function Marca({ vivo }: { vivo: boolean }) {
   return (
     <span className="flex items-center gap-2.5">
-      <span
-        className="display grid h-[22px] w-[22px] flex-none place-items-center bg-accent text-[15px] leading-none text-[var(--accent-ink)]"
-        aria-hidden
-      >
-        工
-      </span>
-      <span className="display text-[19px] leading-none text-ink">Workbench</span>
-      <span className="display text-[15px] leading-none text-muted">工房</span>
+      <Chip />
+      <span className="display text-[21px] leading-none text-ink">WORKBENCH</span>
+      <span className="dot text-[14px] leading-none text-muted max-sm:hidden">lab.llm</span>
       {vivo && <Giro className="text-accent" />}
     </span>
   );

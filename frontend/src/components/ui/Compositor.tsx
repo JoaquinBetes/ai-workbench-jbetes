@@ -3,7 +3,7 @@ import { useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from "
 import { Giro } from "../ascii/Texto";
 
 /**
- * Campo para escribirle al modelo. Marco con marcas de registro; mientras el
+ * Campo para escribirle al modelo. Panel con vías en las esquinas; mientras el
  * modelo escribe, una línea de exploración recorre el borde de arriba (estado,
  * no decoración: se detiene cuando termina).
  */
