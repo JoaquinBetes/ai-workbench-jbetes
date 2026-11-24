@@ -2,8 +2,7 @@ import type { ReactNode } from "react";
 import type { Escena } from "../../lib/ascii";
 import LienzoAscii from "../ascii/LienzoAscii";
 import { Decodificar } from "../ascii/Texto";
-
-const KANJI: Record<string, string> = { "Cap. 2": "第二章", "Cap. 3": "第三章", "Cap. 4": "第四章" };
+import { TINTA } from "../../lib/tintas";
 
 /** Encabezado de cada vista: capítulo del libro, título, una línea de contexto y acciones. */
 export function EncabezadoVista({
@@ -21,15 +20,13 @@ export function EncabezadoVista({
     <div className="enter flex min-h-[64px] flex-wrap items-center gap-x-4 gap-y-2 px-1 py-2" style={{ ["--delay" as string]: "60ms" }}>
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
         {capitulo && (
-          <span className="tag tag--accent self-center max-sm:hidden">
-            {capitulo.toLowerCase()}
-            {KANJI[capitulo] && <span className="display text-muted">{KANJI[capitulo]}</span>}
-          </span>
+          <span className="tag tag--accent self-center max-sm:hidden">{capitulo.toLowerCase()}</span>
         )}
-        <h1 className="display truncate pb-1 text-[26px] leading-[1.2] text-ink max-sm:whitespace-normal">
+        <h1 className="display truncate pb-1 text-[30px] leading-[1.1] text-ink max-sm:whitespace-normal">
           <Decodificar texto={titulo} />
+          <span className="caret" aria-hidden />
         </h1>
-        <p className="hint hidden truncate xl:block">{descripcion}</p>
+        <p className="hint hidden truncate 2xl:block">{descripcion}</p>
       </div>
       {acciones && <div className="ml-auto flex flex-none flex-wrap items-center gap-2 max-md:ml-0 max-md:w-full max-md:flex-auto">{acciones}</div>}
     </div>
@@ -43,6 +40,9 @@ export function Vacio({
   children,
   escena,
   etiquetaEscena,
+  interactiva = false,
+  marco = false,
+  altoEscena = 180,
 }: {
   icono?: ReactNode;
   titulo: string;
@@ -50,12 +50,17 @@ export function Vacio({
   /** arte ASCII animado en lugar del ícono */
   escena?: Escena;
   etiquetaEscena?: string;
+  /** si la escena sigue al puntero */
+  interactiva?: boolean;
+  /** en un panel propio (para cuando el vacío está sobre la placa del fondo) */
+  marco?: boolean;
+  altoEscena?: number;
 }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+  const contenido = (
+    <>
       {escena ? (
-        <div className="h-[180px] w-full max-w-[360px]">
-          <LienzoAscii escena={escena} celda={12} fps={14} etiqueta={etiquetaEscena} />
+        <div className="w-full max-w-[420px]" style={{ height: altoEscena }}>
+          <LienzoAscii escena={escena} celda={12} fps={15} etiqueta={etiquetaEscena} interactivo={interactiva} />
         </div>
       ) : (
         icono && (
@@ -64,8 +69,17 @@ export function Vacio({
           </span>
         )
       )}
-      <p className={escena ? "display text-[22px] text-ink" : "text-small text-ink"}>{titulo}</p>
+      <p className={escena ? "display text-[24px] leading-tight text-ink" : "text-small text-ink"}>{titulo}</p>
       {children && <div className="hint max-w-[36ch]">{children}</div>}
+    </>
+  );
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+      {marco ? (
+        <div className="panel fade-in flex w-full max-w-[520px] flex-col items-center gap-3 px-6 pb-7 pt-4">{contenido}</div>
+      ) : (
+        contenido
+      )}
     </div>
   );
 }
@@ -103,8 +117,8 @@ export function TipGrafico({
 
 /** Ejes de Recharts: discretos, del color de las líneas, con números en mono a 13 px. */
 export const EJE = {
-  tick: { fill: "#8c887c", fontSize: 13, fontFamily: "DotGothic16, monospace" },
+  tick: { fill: TINTA.apagada, fontSize: 14, fontFamily: '"Terminal", VT323, monospace' },
   axisLine: false,
   tickLine: false,
 } as const;
-export const GRILLA = { stroke: "rgba(236,232,220,.1)", strokeDasharray: "2 3", vertical: false } as const;
+export const GRILLA = { stroke: TINTA.pista, strokeDasharray: "2 3", vertical: false } as const;
