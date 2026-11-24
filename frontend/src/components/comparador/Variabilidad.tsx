@@ -1,4 +1,3 @@
-import { Shuffle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { streamChat, type TokenLogprob } from "../../lib/api";
@@ -7,10 +6,13 @@ import { escribiendo, useComandos } from "../../lib/comandos";
 import { num, porcentaje } from "../../lib/formato";
 import { metricas } from "../../lib/probs";
 import { useModelos } from "../../lib/useModelos";
+import { escenaMuestras } from "../../lib/ascii";
+import { BarraTexto, Giro } from "../ascii/Texto";
+import { Barras } from "../graficos3d";
 import { Deslizador, Interruptor, Lectura, Seccion } from "../ui/Controles";
 import SelectorModelo from "../ui/SelectorModelo";
 import { EJE, GRILLA, TipGrafico, Vacio } from "../ui/Vista";
-import { BotonCorrer, CampoPrompt, PanelConfig } from "./comun";
+import { BotonCorrer, CampoPrompt, PanelConfig, TINTA_HEX } from "./comun";
 
 type Muestra = { n: number; seed: number | null; texto: string; tokens: TokenLogprob[]; error?: string };
 
@@ -24,6 +26,7 @@ type Corrida = {
   acuerdo: number;
   entropia: number;
   mayoritaria: string;
+  grupos: { clave: string; ejemplo: string; n: number }[];
 };
 
 const EJEMPLOS = [
@@ -55,15 +58,55 @@ function Tendencia({ datos, clave, titulo, formato }: { datos: Corrida[]; clave:
             <Line
               type="monotone"
               dataKey={clave}
-              stroke="#dafa9c"
-              strokeWidth={2}
-              dot={{ r: 4, fill: "#dafa9c", stroke: "#191919", strokeWidth: 2 }}
+              stroke={TINTA_HEX.tinta}
+              strokeWidth={1.5}
+              dot={{ r: 3.5, fill: TINTA_HEX.senal, stroke: TINTA_HEX.panel, strokeWidth: 2 }}
               activeDot={{ r: 5 }}
               isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Histograma 3D: una fila por corrida (ordenadas por temperatura) y una
+ * columna por respuesta (las más frecuentes en todas las corridas). Se ve
+ * cómo la mayoría se reparte en más respuestas a medida que sube la temperatura.
+ */
+function Histograma3D({ corridas }: { corridas: Corrida[] }) {
+  const totales = new Map<string, { ejemplo: string; n: number }>();
+  corridas.forEach((c) =>
+    c.grupos.forEach((g) => {
+      const t = totales.get(g.clave);
+      totales.set(g.clave, { ejemplo: t?.ejemplo ?? g.ejemplo, n: (t?.n ?? 0) + g.n });
+    }),
+  );
+  const top = [...totales.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 6);
+  const tono = (i: number) => {
+    // secuencial en washi: más clara la temperatura más alta
+    const k = corridas.length > 1 ? i / (corridas.length - 1) : 1;
+    const f = 0.35 + k * 0.65;
+    const c = [0xec, 0xe8, 0xdc].map((v) => Math.round(5 + (v - 5) * f));
+    return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+  };
+  return (
+    <div className="border-b border-line">
+      <Barras
+        titulo="Histograma 3D de respuestas: una fila por temperatura y una columna por respuesta"
+        columnas={top.map(([, v]) => recortar(v.ejemplo.replace(/\s+/g, " "), 12))}
+        series={corridas.map((c, i) => ({ etiqueta: `T ${num(c.temperatura, 1)}`, color: tono(i) }))}
+        valores={corridas.map((c) => top.map(([clave]) => (c.grupos.find((g) => g.clave === clave)?.n ?? 0) / c.n))}
+        textos={corridas.map((c) =>
+          top.map(([clave, v]) => {
+            const n = c.grupos.find((g) => g.clave === clave)?.n ?? 0;
+            return `T ${num(c.temperatura, 1)} · “${recortar(v.ejemplo, 20)}” · ${n} de ${c.n}`;
+          }),
+        )}
+        alto={320}
+      />
     </div>
   );
 }
@@ -141,6 +184,7 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
           acuerdo: gs[0].items.length / validas.length,
           entropia: entropiaRespuestas(gs.map((g) => g.items.length)),
           mayoritaria: gs[0].ejemplo,
+          grupos: gs.map((g) => ({ clave: g.clave, ejemplo: g.ejemplo, n: g.items.length })),
         },
       ]);
     }
@@ -180,7 +224,7 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
   const maxGrupo = grupos[0]?.items.length ?? 1;
 
   return (
-    <div className="grid h-full min-h-0 grid-cols-[18.5rem_minmax(0,1fr)] gap-3">
+    <div className="grid h-full min-h-0 grid-cols-[18.5rem_minmax(0,1fr)] gap-3 max-lg:h-auto max-lg:grid-cols-1">
       <PanelConfig
         meta={`${cantidad} muestras`}
         pie={
@@ -222,10 +266,10 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
         </Seccion>
       </PanelConfig>
 
-      <section className="min-h-0 space-y-3 overflow-y-auto pr-1" aria-label="Resultados">
+      <section className="min-h-0 space-y-3 overflow-y-auto pr-1 max-lg:overflow-visible max-lg:pr-0" aria-label="Resultados">
         {muestras.length === 0 && !corriendo ? (
           <div className="panel h-full min-h-80">
-            <Vacio icono={<Shuffle />} titulo="Un prompt, muchas veces">
+            <Vacio escena={escenaMuestras} etiquetaEscena="Columnas de números que se re-sortean hasta asentarse en el valor más frecuente" titulo="Un prompt, muchas veces">
               Vas a ver cuántas respuestas distintas da el modelo con la misma pregunta, y cuál elegiría la
               autoconsistencia.
             </Vacio>
@@ -249,7 +293,7 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
                     <span
                       key={i}
                       data-tip={m ? (m.error ? "Error" : recortar(m.texto.trim() || "(vacía)", 40)) : undefined}
-                      className={`num grid h-8 w-10 place-items-center rounded-[4px] border text-label transition-colors duration-200 ${
+                      className={`num grid h-8 w-10 place-items-center border text-label transition-colors duration-200 ${
                         m ? "border-transparent" : actual ? "border-[var(--accent-line)] text-accent" : "border-line text-muted"
                       }`}
                       style={
@@ -260,7 +304,7 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
                           : undefined
                       }
                     >
-                      {actual ? <span className="spin" aria-hidden /> : i + 1}
+                      {actual ? <Giro /> : i + 1}
                     </span>
                   );
                 })}
@@ -300,23 +344,18 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
                           type="button"
                           aria-pressed={grupoSel === g.clave}
                           onClick={() => setGrupoSel((s) => (s === g.clave ? null : g.clave))}
-                          className={`grid w-full grid-cols-[minmax(0,11rem)_1fr_3rem] items-center gap-3 rounded-md px-2 py-1.5 text-left transition-[background-color,opacity] hover:bg-raised ${
+                          className={`grid w-full grid-cols-[minmax(0,10rem)_1fr_3rem] items-center gap-3 px-2 py-1.5 text-left transition-[background-color,opacity] hover:bg-raised ${
                             grupoSel && grupoSel !== g.clave ? "opacity-40" : ""
                           }`}
                         >
                           <span className="truncate text-label text-ink-2">{recortar(g.ejemplo.replace(/\s+/g, " "), 40)}</span>
-                          <span className="relative h-2 overflow-hidden rounded-full bg-line">
-                            <span
-                              className="absolute inset-y-0 left-0 w-full origin-left rounded-full"
-                              style={{ transform: `scaleX(${g.items.length / maxGrupo})`, background: tonoGrupo(i), transition: "transform 200ms var(--ease)" }}
-                            />
-                          </span>
+                          <BarraTexto valor={g.items.length / maxGrupo} largo={20} tono={i === 0 ? "accent" : "ink"} className="overflow-hidden" />
                           <span className="num text-right text-label text-ink">{g.items.length}</span>
                         </button>
                       </li>
                     ))}
                   </ol>
-                  <p className="hint border-t border-line px-4 py-2.5">En lima, la mayoritaria: la que elegiría la autoconsistencia.</p>
+                  <p className="hint border-t border-line px-4 py-2.5">En bermellón, la mayoritaria: la que elegiría la autoconsistencia.</p>
                 </div>
 
                 <div className="panel rise-in flex flex-col">
@@ -337,7 +376,7 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
                         return (
                           <li key={m.n} className="grid grid-cols-[2.25rem_1fr_auto] gap-3 px-4 py-2">
                             <span className="num flex items-center gap-1.5 self-start pt-px text-label text-muted">
-                              <span className="h-2 w-2 rounded-[2px]" style={{ background: m.error ? "var(--danger)" : tonoGrupo(g ?? 9) }} aria-hidden />
+                              <span className="h-2 w-2" style={{ background: m.error ? "var(--danger)" : tonoGrupo(g ?? 9) }} aria-hidden />
                               {m.n}
                             </span>
                             <span className="line-clamp-3 whitespace-pre-wrap text-label text-ink-2">
@@ -363,6 +402,7 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
               <span className="panel-title">Historial de corridas</span>
               <span className="panel-meta ml-auto">repetí el prompt con otras temperaturas</span>
             </div>
+            {mismasCondiciones.length >= 1 && <Histograma3D corridas={mismasCondiciones} />}
             {mismasCondiciones.length >= 2 && (
               <div className="grid border-b border-line md:grid-cols-2 md:divide-x md:divide-line">
                 <Tendencia datos={mismasCondiciones} clave="distintas" titulo="Respuestas distintas" formato={(v) => num(v, 0)} />

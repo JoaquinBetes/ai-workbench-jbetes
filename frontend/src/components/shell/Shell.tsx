@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useListaComandos, type Comando } from "../../lib/comandos";
 import { entero, num, segundos } from "../../lib/formato";
 import { useTelemetria } from "../../lib/telemetria";
-import { Sparkline, Teclas } from "../ui/Controles";
+import { BarraTexto, Giro, SparkTexto } from "../ascii/Texto";
+import { Teclas } from "../ui/Controles";
 import Segmentado from "../ui/Segmentado";
 
 export type IdVista = "playground" | "comparador" | "chat";
@@ -21,35 +22,22 @@ const ICONOS: Record<IdVista, typeof FlaskConical> = {
 };
 
 /**
- * La marca: cuatro barras de distintas alturas, una distribución de
- * probabilidad. Mientras el modelo genera, las barras "respiran" (estado).
+ * La marca: un sello bermellón (hanko) con el carácter 工, "obra / taller".
+ * Mientras el modelo genera, al lado gira un indicador de texto.
  */
 export function Marca({ vivo }: { vivo: boolean }) {
-  const alturas = [7, 14, 10, 4];
   return (
-    <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden className="flex-none">
-      <rect x="0.5" y="0.5" width="19" height="19" rx="5" fill="var(--accent-soft)" stroke="var(--accent-line)" />
-      {alturas.map((h, i) => (
-        <rect
-          key={i}
-          x={4 + i * 3.2}
-          y={16 - h}
-          width="2"
-          height={h}
-          rx="1"
-          fill="var(--accent)"
-          opacity={i === 1 ? 1 : 0.55}
-          style={
-            vivo
-              ? {
-                  transformOrigin: `${5 + i * 3.2}px 16px`,
-                  animation: `level .6s linear ${-i * 0.15}s infinite alternate`,
-                }
-              : undefined
-          }
-        />
-      ))}
-    </svg>
+    <span className="flex items-center gap-2.5">
+      <span
+        className="display grid h-[22px] w-[22px] flex-none place-items-center bg-accent text-[15px] leading-none text-[var(--accent-ink)]"
+        aria-hidden
+      >
+        工
+      </span>
+      <span className="display text-[19px] leading-none text-ink">Workbench</span>
+      <span className="display text-[15px] leading-none text-muted">工房</span>
+      {vivo && <Giro className="text-accent" />}
+    </span>
   );
 }
 
@@ -67,14 +55,10 @@ export function BarraSuperior({
   const mac = typeof navigator !== "undefined" && /Mac/.test(navigator.platform);
 
   return (
-    <header className="enter relative z-20 flex h-[var(--bar-top)] items-center gap-5 border-b border-line px-4" style={{ ["--delay" as string]: "0ms" }}>
-      <div className="flex items-center gap-2.5">
-        <Marca vivo={t.activas.length > 0} />
-        <span className="display text-[17px] leading-none text-ink">Workbench</span>
-        <span className="mono text-label text-muted">jbetes</span>
-      </div>
+    <header className="enter relative z-20 flex h-[var(--bar-top)] items-center gap-5 border-b border-line bg-[var(--bg)] px-4 max-lg:gap-3 max-sm:h-auto max-sm:flex-wrap max-sm:py-2" style={{ ["--delay" as string]: "0ms" }}>
+      <Marca vivo={t.activas.length > 0} />
 
-      <span className="h-5 w-px bg-line-2" aria-hidden />
+      <span className="h-5 w-px bg-line-2 max-sm:hidden" aria-hidden />
 
       <Segmentado
         etiqueta="Vistas"
@@ -91,86 +75,103 @@ export function BarraSuperior({
         })}
       />
 
-      <div className="ml-auto flex items-center gap-3">
+      <div className="ml-auto flex items-center gap-3 max-sm:gap-2">
         <button
           type="button"
           onClick={onPaleta}
-          className="field flex h-[34px] w-64 items-center gap-2 text-left text-muted transition-colors hover:border-[color-mix(in_oklab,var(--ink)_28%,transparent)]"
+          aria-label="Abrir la paleta de comandos"
+          className="field flex h-[34px] w-64 items-center gap-2 text-left text-muted transition-colors hover:border-[var(--ink-3)] max-lg:w-auto"
         >
           <Search className="h-3.5 w-3.5" aria-hidden />
-          <span className="flex-1 text-label">Buscar o ejecutar…</span>
+          <span className="flex-1 text-label max-lg:hidden">Buscar o ejecutar…</span>
           <Teclas teclas={[mac ? "⌘" : "Ctrl", "K"]} />
         </button>
         <span
-          className="tag"
+          className="tag max-sm:hidden"
           data-tip={ok ? `Backend y Ollama responden · ${t.salud?.ollama.host ?? ""}` : t.salud?.ollama.error ?? "Sin conexión con el backend"}
           data-tip-pos="left"
         >
-          <span className={`live ${ok ? "" : "live--off"}`} aria-hidden />
-          {ok ? "En línea" : t.salud ? "Ollama no responde" : t.saludError ? "Sin backend" : "Conectando"}
+          <span className={`live ${ok ? "live--ok" : "live--off"}`} aria-hidden />
+          <span className="max-md:hidden">{ok ? "en línea" : t.salud ? "Ollama no responde" : t.saludError ? "sin backend" : "conectando"}</span>
         </span>
       </div>
     </header>
   );
 }
 
-/** Barra de estado, como en un IDE: conexión, modelo y la telemetría de la sesión, en vivo. */
-export function BarraEstado({ onAtajos }: { onAtajos: () => void }) {
+/** Barra de estado: conexión, modelo y la telemetría de la sesión, en vivo y en modo texto. */
+export function BarraEstado({
+  onAtajos,
+  fondoApagado,
+  onFondo,
+}: {
+  onAtajos: () => void;
+  fondoApagado: boolean;
+  onFondo: () => void;
+}) {
   const t = useTelemetria();
   const ok = !t.saludError && !!t.salud?.ollama.ok;
   const velocidades = t.historial.map((c) => c.tokS).filter((v): v is number => v !== null);
   const ultima = t.historial[t.historial.length - 1];
   const media = velocidades.length ? velocidades.reduce((a, b) => a + b, 0) / velocidades.length : null;
+  const maxima = velocidades.length ? Math.max(...velocidades, 1) : 100;
   const activa = t.activas[t.activas.length - 1];
 
   return (
     <footer
-      className="enter relative z-20 flex h-[var(--bar-bottom)] items-center gap-4 border-t border-line bg-[color-mix(in_oklab,var(--bg)_70%,transparent)] px-4 text-label text-muted backdrop-blur"
+      className="enter relative z-20 flex min-h-[var(--bar-bottom)] flex-wrap items-center gap-x-4 gap-y-1 border-t border-line bg-[var(--bg)] px-4 py-1 text-label text-muted"
       style={{ ["--delay" as string]: "160ms" }}
     >
-      <span className="flex items-center gap-2">
-        <span className={`live ${ok ? "live--idle" : "live--off"}`} aria-hidden />
-        <span className="mono">{ok ? `ollama ${t.salud?.ollama.version ?? ""}` : "ollama sin conexión"}</span>
+      <span className="dot flex items-center gap-2">
+        <span className={`live ${ok ? "live--ok live--idle" : "live--off"}`} aria-hidden />
+        {ok ? `ollama ${t.salud?.ollama.version ?? ""}` : "ollama sin conexión"}
         {t.latenciaMs !== null && <span className="num">· {t.latenciaMs} ms</span>}
       </span>
 
       {t.ultimoModelo && (
-        <span className="mono hidden md:inline" data-tip="El último modelo que se usó: probablemente sigue cargado en la GPU" data-tip-pos="top">
+        <span className="dot hidden md:inline" data-tip="El último modelo que se usó: probablemente sigue cargado en la GPU" data-tip-pos="top">
           gpu · {t.ultimoModelo}
         </span>
       )}
 
-      <span className="ml-auto flex items-center gap-3" aria-live="polite">
+      <span className="ml-auto flex flex-wrap items-center gap-3" aria-live="polite">
         {activa ? (
           <span className="flex items-center gap-2 text-ink">
-            <span className="level" aria-hidden>
-              <i />
-              <i />
-              <i />
-            </span>
-            <span className="mono">{activa.modelo}</span>
-            <span className="num text-accent">{activa.tokS !== null ? `${num(activa.tokS, 0)} tok/s` : "cargando…"}</span>
+            <Giro className="text-accent" />
+            <span className="dot">{activa.modelo}</span>
+            <BarraTexto valor={(activa.tokS ?? 0) / Math.max(maxima, activa.tokS ?? 0, 1)} largo={12} tono="accent" />
+            <span className="num text-accent">{activa.tokS !== null ? `${num(activa.tokS, 0)} tok/s` : "cargando"}</span>
             <span className="num">{entero(activa.tokens)} tokens</span>
             {t.activas.length > 1 && <span className="num">+{t.activas.length - 1}</span>}
           </span>
         ) : ultima ? (
-          <span className="flex items-center gap-2">
+          <span className="dot flex items-center gap-2">
             <span>última</span>
             <span className="num text-ink-2">{num(ultima.tokS, 1)} tok/s</span>
             <span className="num">ttft {segundos(ultima.ttft)}</span>
           </span>
         ) : (
-          <span>sin generaciones todavía</span>
+          <span className="dot">sin generaciones todavía</span>
         )}
         {velocidades.length > 1 && (
-          <span className="hidden items-center gap-2 lg:flex" data-tip={`Velocidad de las últimas ${velocidades.length} respuestas · media ${num(media, 1)} tok/s`} data-tip-pos="top">
-            <Sparkline valores={velocidades.slice(-24)} ancho={88} alto={16} />
+          <span className="hidden lg:inline" data-tip={`Velocidad de las últimas ${velocidades.length} respuestas · media ${num(media, 1)} tok/s`} data-tip-pos="top">
+            <SparkTexto valores={velocidades.slice(-20)} className="text-ink-2" />
           </span>
         )}
         <span className="num hidden lg:inline">{entero(t.tokensSesion)} tokens en la sesión</span>
-        <button type="button" onClick={onAtajos} className="flex items-center gap-1.5 rounded-sm px-1 transition-colors hover:text-ink">
+        <button
+          type="button"
+          onClick={onFondo}
+          aria-pressed={!fondoApagado}
+          className="dot px-1 transition-colors hover:text-ink"
+          data-tip={fondoApagado ? "Encender el fondo animado" : "Apagar el fondo animado"}
+          data-tip-pos="top"
+        >
+          fondo {fondoApagado ? "apagado" : "vivo"}
+        </button>
+        <button type="button" onClick={onAtajos} className="dot flex items-center gap-1.5 px-1 transition-colors hover:text-ink">
           <Command className="h-3.5 w-3.5" aria-hidden />
-          Atajos
+          atajos
           <kbd className="kbd">?</kbd>
         </button>
       </span>

@@ -77,7 +77,13 @@ export default function Segmentado<T extends string>({
     if (!contenedor.current) return;
     const ro = new ResizeObserver(() => ubicar(false));
     ro.observe(contenedor.current);
-    return () => ro.disconnect();
+    // Las fuentes cambian el ancho de las opciones sin cambiar el del contenedor.
+    let vivo = true;
+    document.fonts?.ready.then(() => vivo && ubicar(false));
+    return () => {
+      vivo = false;
+      ro.disconnect();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [valor]);
 

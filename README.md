@@ -9,7 +9,7 @@ casero con una RTX 3060 Ti y Ollama, y se accede desde cualquier lado por Tailsc
 | Capa | Tecnología |
 |---|---|
 | Backend | Python · FastAPI · cliente oficial de Ollama |
-| Frontend | React 19 · TypeScript · Vite · Tailwind CSS |
+| Frontend | React 19 · TypeScript · Vite · Tailwind CSS · three.js (React Three Fiber) |
 | Comunicación | API REST + Server-Sent Events (streaming de tokens) |
 | Modelos | Ollama, corriendo directo en el servidor |
 | Despliegue | Docker Compose (una sola imagen sirve API y frontend) |
@@ -33,11 +33,13 @@ ai-workbench-jbetes/
 ├── frontend/
 │   ├── package.json
 │   ├── vite.config.ts          en desarrollo reenvía /api al backend
-│   ├── public/assets/          kit de la skill de taste (luz del campo de prompt), tal cual
+│   ├── scripts/revisar-diseno.mjs  comprueba las reglas de DESIGN.md (npm run lint:diseno)
 │   └── src/
-│       ├── App.tsx                 shell: vistas, atajos globales, paleta de comandos
+│       ├── App.tsx                 shell: vistas, atajos globales, paleta de comandos, fondo vivo
 │       ├── index.css               sistema visual (tokens, paneles, botones, movimiento)
 │       ├── lib/
+│       │   ├── ascii.ts            motor de arte ASCII: tintas, ruido y escenas animadas
+│       │   ├── paisaje.ts          datos de la cordillera 3D (una cresta por token)
 │       │   ├── api.ts              cliente de la API (incluye el lector de SSE)
 │       │   ├── telemetria.ts       velocidad en vivo, historial de la sesión, salud
 │       │   ├── comandos.ts         registro de comandos para la paleta (Ctrl+K)
@@ -49,7 +51,9 @@ ai-workbench-jbetes/
 │       │   └── useModelos.ts       lista de modelos de Ollama
 │       └── components/
 │           ├── shell/              barra superior, barra de estado, paleta y atajos
-│           ├── ui/                 piezas compartidas (controles, selector de modelo, prompt)
+│           ├── ui/                 piezas compartidas (controles, selector de modelo, compositor)
+│           ├── ascii/              lienzo ASCII, fondo vivo y efectos de texto (descifrar, barras)
+│           ├── graficos3d/         cordillera y barras en 3D, con modo ASCII
 │           ├── Chat.tsx            chat simple
 │           ├── playground/         capítulo 2: playground, inspector y ramas
 │           └── comparador/         capítulo 2: comparador de modelos
@@ -67,6 +71,7 @@ ai-workbench-jbetes/
 - [x] **Cap. 2 · Entrega 3b — Variabilidad:** el mismo prompt N veces, histograma de respuestas, respuesta mayoritaria, entropía e historial por temperatura
 - [x] **Cap. 2 · Entrega 3c — Salidas estructuradas:** solo prompt vs. post-proceso vs. sampling restringido, con validez, esquema y exactitud
 - [x] **Rediseño de la interfaz:** sistema visual propio, barra de estado con telemetría en vivo, paleta de comandos y atajos de teclado
+- [x] **Modo texto:** estética de arte ASCII japonés en blanco y negro, escenas animadas, gráficos 3D con modo ASCII
 - [ ] **Cap. 3-4 — Arena y evaluador:** comparaciones a ciegas, ranking Elo, datasets de prueba, LLM juez
 - [ ] **Cap. 5 — Prompt studio:** versionado, A/B, pruebas de inyección
 - [ ] **Cap. 6 — RAG y agentes:** documentos, chunks, mapa de embeddings, trazas de agente
@@ -76,9 +81,19 @@ ai-workbench-jbetes/
 
 ## Interfaz
 
-Tema oscuro único, pensado como un instrumento de laboratorio. La paleta (soot-pale-lime), la
-tipografía (Funnel Display, Funnel Sans y DM Mono) y los radios (sharp) los repartió la skill
-de taste; las fuentes están dentro del proyecto, así que funciona sin internet.
+"Modo texto": tinta sumi sobre papel washi, dibujado con caracteres. Casi todo es blanco y
+negro; el color aparece diluido y solo donde significa algo (bermellón para la señal, ocre
+para la duda). Las reglas completas están en [DESIGN.md](DESIGN.md).
+
+- **Arte ASCII vivo:** un campo de niebla de caracteres detrás de todo que sigue al mouse, y
+  escenas animadas en los estados vacíos (Fuji ukiyo-e, ensō, toro, lluvia de muestras, cubo).
+  Se apaga desde la barra de estado ("fondo vivo") o la paleta de comandos.
+- **Gráficos 3D:** la respuesta del playground como cordillera (una cresta por token, con la
+  distribución de alternativas), resúmenes del comparador y el histograma de variabilidad en
+  barras 3D. Se giran con el mouse y tienen un modo ASCII.
+- **Letras:** Zen Antique (títulos), DotGothic16 (lecturas y números) y M PLUS 1 Code (interfaz
+  y texto del modelo). Están dentro del proyecto, así que funciona sin internet.
+- Con "reducir movimiento" activado en el sistema, las escenas quedan quietas en un cuadro.
 
 | Atajo | Qué hace |
 |---|---|

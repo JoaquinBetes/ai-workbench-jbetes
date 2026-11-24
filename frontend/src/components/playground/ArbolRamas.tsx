@@ -1,6 +1,7 @@
 import { Background, Handle, Position, ReactFlow, type Edge, type Node, type NodeProps } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useMemo } from "react";
+import { Giro } from "../ascii/Texto";
 import { num } from "../../lib/formato";
 import { metricas, mostrarToken } from "../../lib/probs";
 import { ID_RAIZ, resumenNuevo, type Rama } from "../../lib/ramas";
@@ -23,17 +24,16 @@ function NodoRama({ data }: NodeProps<Node<DatosNodo>>) {
   return (
     <div
       style={{ width: ANCHO }}
-      className={`relative cursor-pointer overflow-hidden rounded-lg border px-3 py-2.5 text-left transition-colors ${
-        activa ? "border-[var(--accent-line)] bg-[var(--raised)]" : "border-line bg-panel hover:border-line-2"
+      className={`relative cursor-pointer overflow-hidden border px-3 py-2.5 text-left transition-colors ${
+        activa ? "border-[var(--accent)] bg-[var(--raised)]" : "border-line bg-panel hover:border-line-2"
       }`}
     >
-      {activa && <span className="absolute inset-y-0 left-0 w-[3px] bg-accent" aria-hidden />}
-      <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5 !border-0 !bg-[var(--line-2)]" />
+      <Handle type="target" position={Position.Left} className="!h-1.5 !w-1.5 !rounded-none !border-0 !bg-[var(--ink-3)]" />
       <div className="mb-1 flex items-center justify-between gap-2">
-        <span className="text-label font-medium text-ink">{titulo}</span>
+        <span className="dot text-label text-ink">{titulo}</span>
         {rama.generando ? (
           <span className="flex items-center gap-1.5 text-label text-accent">
-            <span className="spin" aria-hidden /> generando
+            <Giro /> generando
           </span>
         ) : (
           perplejidad !== null && <span className="num text-label text-muted">ppl {num(perplejidad, 2)}</span>
@@ -42,12 +42,12 @@ function NodoRama({ data }: NodeProps<Node<DatosNodo>>) {
       {rama.corte !== null && (
         <div className="mb-1 flex items-center gap-1.5 text-label text-muted">
           forzó
-          <span className="mono rounded-[3px] bg-accent px-1 text-[var(--accent-ink)]">{mostrarToken(rama.tokens[rama.corte].token)}</span>
+          <span className="mono bg-accent px-1 text-[var(--accent-ink)]">{mostrarToken(rama.tokens[rama.corte].token)}</span>
           <span className="num">en #{rama.corte + 1}</span>
         </div>
       )}
       <div className="line-clamp-2 text-label leading-snug text-ink-2">{resumenNuevo(rama, 70) || "…"}</div>
-      <Handle type="source" position={Position.Bottom} style={{ left: 14 }} className="!h-1.5 !w-1.5 !border-0 !bg-[var(--line-2)]" />
+      <Handle type="source" position={Position.Bottom} style={{ left: 14 }} className="!h-1.5 !w-1.5 !rounded-none !border-0 !bg-[var(--ink-3)]" />
     </div>
   );
 }
@@ -122,7 +122,7 @@ export default function ArbolRamas({
         colorMode="dark"
         proOptions={{ hideAttribution: true }}
       >
-        <Background gap={22} size={1} color="rgba(255,255,255,.07)" />
+        <Background gap={16} size={1} color="rgba(236,232,220,.09)" />
       </ReactFlow>
     </div>
   );

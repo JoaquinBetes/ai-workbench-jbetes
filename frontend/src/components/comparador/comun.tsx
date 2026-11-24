@@ -1,9 +1,12 @@
 import { Play, Square } from "lucide-react";
 import type { ReactNode } from "react";
+import { Giro } from "../ascii/Texto";
 
-/** Serie categórica validada para fondo oscuro (dataviz): azul, naranja, aqua, amarillo. */
+/** Serie categórica validada para fondo oscuro (dataviz): ai, shu, rokushō, kin (colores japoneses, apagados). */
 export const SERIES = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
-export const SERIES_HEX = ["#3987e5", "#d95926", "#199e70", "#c98500"];
+export const SERIES_HEX = ["#6b8ed0", "#cf6448", "#45a689", "#b98d3a"];
+/** Los mismos tokens de index.css en hex, para recharts y three.js (no leen variables CSS). */
+export const TINTA_HEX = { tinta: "#ece8dc", senal: "#c2583f", panel: "#0c0c0b" };
 
 /** Panel de configuración de un modo del comparador, con el botón de correr abajo. */
 export function PanelConfig({
@@ -65,16 +68,22 @@ export function BotonCorrer({
           <Play className="fill-current" style={{ width: 12, height: 12 }} aria-hidden />
           {texto}
           <span className="ml-auto flex items-center gap-1 opacity-70">
-            <kbd className="kbd border-[rgb(0_0_0/.2)] bg-[rgb(0_0_0/.08)] text-[var(--accent-ink)]">↵</kbd>
+            <kbd className="kbd border-transparent bg-transparent text-[var(--bg)]">↵</kbd>
           </span>
         </button>
       )}
-      <div className="h-[2px] overflow-hidden rounded-full bg-line" aria-hidden>
-        <div
-          className="h-full origin-left bg-accent"
-          style={{ transform: `scaleX(${corriendo ? fraccion : 0})`, transition: "transform 300ms var(--ease)" }}
-        />
-      </div>
+      {corriendo && total ? (
+        <div className="flex items-center justify-between gap-2" aria-hidden>
+          <span className="mono text-label text-ink-3">[</span>
+          <span className="flex-1 overflow-hidden">
+            <span className="mono block whitespace-pre text-label leading-none">
+              <span className="text-accent">{"#".repeat(Math.round(fraccion * 28))}</span>
+              <span className="text-faint">{"·".repeat(28 - Math.round(fraccion * 28))}</span>
+            </span>
+          </span>
+          <span className="mono text-label text-ink-3">]</span>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -118,11 +127,7 @@ export function Estado({ estado, detalle }: { estado: "esperando" | "generando" 
   if (estado === "generando")
     return (
       <span className="tag tag--accent">
-        <span className="level" aria-hidden>
-          <i />
-          <i />
-          <i />
-        </span>
+        <Giro />
         {detalle ?? "generando"}
       </span>
     );
