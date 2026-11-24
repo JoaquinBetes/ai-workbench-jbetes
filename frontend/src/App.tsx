@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import Fondo from "./components/ascii/Fondo";
 import Chat from "./components/Chat";
 import Comparador, { MODOS_COMPARADOR, type IdModo } from "./components/comparador/Comparador";
+import Evaluacion from "./components/evaluacion/Evaluacion";
 import Playground from "./components/playground/Playground";
 import { BarraEstado, BarraSuperior, HojaAtajos, PaletaComandos, VISTAS, type IdVista } from "./components/shell/Shell";
 import { escribiendo, useComandos } from "./lib/comandos";
@@ -88,7 +89,7 @@ export default function App() {
         setPaleta((p) => !p);
         return;
       }
-      const digito = /^Digit([1-3])$/.exec(e.code);
+      const digito = /^Digit([1-4])$/.exec(e.code);
       if (digito && (e.altKey || e.ctrlKey || e.metaKey) && !e.shiftKey) {
         e.preventDefault();
         ir(VISTAS[Number(digito[1]) - 1].id);
@@ -148,6 +149,11 @@ export default function App() {
           {visitadas.has("comparador") && (
             <div hidden={vista !== "comparador"} className={`h-full max-lg:h-auto ${quietas.has("comparador") ? "quieta" : ""}`}>
               <Comparador activa={vista === "comparador"} modo={modoComparador} onModo={setModoComparador} />
+            </div>
+          )}
+          {visitadas.has("evaluacion") && (
+            <div hidden={vista !== "evaluacion"} className={`h-full max-lg:h-auto ${quietas.has("evaluacion") ? "quieta" : ""}`}>
+              <Evaluacion activa={vista === "evaluacion"} />
             </div>
           )}
           {visitadas.has("chat") && (
