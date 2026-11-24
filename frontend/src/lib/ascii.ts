@@ -616,3 +616,51 @@ export const escenaCubo: Escena = ({ t, cols, rows, aspecto, poner }) => {
     poner(Math.round(x), Math.round(y), cerca > 0.5 ? "{" : "}", 0.95, cerca > 0.55 ? "accent" : "ink");
   }
 };
+
+/**
+ * Diana: la referencia es el centro y cada respuesta es un dardo. Llegan de a
+ * uno; los que caen cerca del centro se encienden. Es la evaluación con
+ * referencia: medir qué tan lejos quedó cada respuesta de la correcta.
+ */
+export const escenaDiana: Escena = ({ t, cols, rows, aspecto, poner }) => {
+  const cx = cols / 2, cy = rows / 2;
+  const R = Math.min(rows * 0.46, cols * aspecto * 0.3);
+  // anillos: líneas finas cada quinto del radio, con el centro lleno
+  for (let y = 0; y < rows; y++) {
+    for (let x = 0; x < cols; x++) {
+      const d = Math.hypot((x + 0.5 - cx) * aspecto, y + 0.5 - cy) / R;
+      if (d > 1.02) continue;
+      const banda = d * 5;
+      const enLinea = Math.abs(banda - Math.round(banda)) < 0.12 && d > 0.15;
+      if (d < 0.12) poner(x, y, "@", 0.85, "silk");
+      else if (enLinea) poner(x, y, d > 0.95 ? "o" : ":", 0.35 + (1 - d) * 0.3, "muted");
+      else if (BAYER[(y & 3) * 4 + (x & 3)] < 0.18 * (1 - d)) poner(x, y, ".", 0.25, "pista");
+    }
+  }
+  // dardos: uno cada 0,7 s, en una ronda de 10; caen y se quedan hasta que empieza la ronda siguiente
+  const ronda = 8;
+  const fase = t % ronda;
+  const nRonda = Math.floor(t / ronda);
+  for (let k = 0; k < 10; k++) {
+    const llegada = 0.4 + k * 0.7;
+    if (fase < llegada - 0.35) break;
+    const azar1 = ruido(k * 3.1, nRonda * 1.7, 2);
+    const azar2 = ruido(k * 1.3, nRonda * 2.9, 7);
+    const dist = Math.pow(azar1, 1.6) * 1.05;
+    const ang = azar2 * Math.PI * 4;
+    const px = cx + (Math.cos(ang) * dist * R) / aspecto;
+    const py = cy + Math.sin(ang) * dist * R;
+    const vuelo = Math.min(1, Math.max(0, (fase - (llegada - 0.35)) / 0.35));
+    if (vuelo < 1) {
+      // en vuelo: entra desde arriba a la derecha, con estela
+      for (let s = 0; s < 4; s++) {
+        const q = Math.max(0, vuelo - s * 0.08);
+        const fx = px + (1 - q) * cols * 0.4, fy = py - (1 - q) * rows * 0.6;
+        poner(Math.round(fx), Math.round(fy), s === 0 ? "*" : ".", 0.9 - s * 0.2, s === 0 ? "accent" : "muted");
+      }
+    } else {
+      const cerca = dist < 0.35;
+      poner(Math.round(px), Math.round(py), cerca ? "+" : "x", cerca ? 1 : 0.7, cerca ? "accent" : "doubt");
+    }
+  }
+};
