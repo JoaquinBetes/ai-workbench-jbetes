@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint:diseno": "node scripts/revisar-diseno.mjs"
   },
   "dependencies": {
     "@fontsource-variable/m-plus-1-code": "^5.3.1",
