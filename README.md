@@ -40,6 +40,7 @@ ai-workbench-jbetes/
 │       ├── lib/
 │       │   ├── ascii.ts            motor de arte ASCII: placa con pulsos, chip, globo, ojo y más
 │       │   ├── tintas.ts           los colores de index.css en hex, para three.js y recharts
+│       │   ├── movimiento.ts       un solo interruptor para pausar todo lo que se mueve
 │       │   ├── paisaje.ts          datos de la cordillera 3D (una cresta por token)
 │       │   ├── api.ts              cliente de la API (incluye el lector de SSE)
 │       │   ├── telemetria.ts       velocidad en vivo, historial de la sesión, salud
@@ -74,6 +75,7 @@ ai-workbench-jbetes/
 - [x] **Rediseño de la interfaz:** sistema visual propio, barra de estado con telemetría en vivo, paleta de comandos y atajos de teclado
 - [x] **Modo texto:** arte ASCII animado y gráficos 3D con modo ASCII
 - [x] **Fósforo:** consola de los 90 en verde fósforo sobre una placa de circuito; cada token dispara un pulso
+- [x] **Pulido:** contraste, tipografía de lectura, menos ruido, control de movimiento y accesibilidad WCAG 2.2 AA
 - [ ] **Cap. 3-4 — Arena y evaluador:** comparaciones a ciegas, ranking Elo, datasets de prueba, LLM juez
 - [ ] **Cap. 5 — Prompt studio:** versionado, A/B, pruebas de inyección
 - [ ] **Cap. 6 — RAG y agentes:** documentos, chunks, mapa de embeddings, trazas de agente
@@ -89,15 +91,19 @@ errores. Las reglas completas están en [DESIGN.md](DESIGN.md).
 
 - **La placa del fondo trabaja con el modelo:** pistas, vías y chips con nombres de las piezas
   de un modelo (ATTN, SOFTMAX, KV CACHE…). Cada token que llega dispara un pulso que recorre
-  una pista. Se apaga desde la barra de estado ("fondo vivo") o la paleta de comandos.
+  una pista. Vive en los márgenes: hacia el centro de la pantalla se apaga.
+- **Un solo botón pausa todo lo que se mueve** ("pausar animaciones", en la barra de estado o en
+  la paleta de comandos). Si el sistema pide reducir movimiento, arranca en pausa.
 - **Arte ASCII animado** en los estados vacíos: un chip que sortea tokens, un globo de
   ciberespacio, un ojo tramado que sigue al puntero, el toro de Sloane, lluvia de muestras y un cubo.
 - **Gráficos 3D:** la respuesta del playground como cordillera (una cresta por token), resúmenes
   del comparador y el histograma de variabilidad en barras 3D. Se giran con el mouse y tienen un
   modo ASCII.
-- **Letras:** VT323 (títulos, números, etiquetas) e IBM Plex Mono (interfaz y texto del modelo).
-  Están dentro del proyecto, así que funciona sin internet.
-- Con "reducir movimiento" activado en el sistema, las escenas quedan quietas en un cuadro.
+- **Letras:** VT323 (títulos y números grandes), IBM Plex Mono (interfaz y números) e IBM Plex
+  Sans (lo que escribe el modelo y los textos para leer). Están dentro del proyecto, así que
+  funciona sin internet.
+- **Accesible:** contraste medido con WCAG y APCA, foco visible, objetivos de 24 px (44 en
+  pantallas táctiles) y 0 problemas de axe-core (WCAG 2.2 AA) en todas las vistas.
 
 | Atajo | Qué hace |
 |---|---|

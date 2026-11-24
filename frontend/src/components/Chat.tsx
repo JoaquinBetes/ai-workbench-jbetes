@@ -90,7 +90,7 @@ export default function Chat({ activa = true }: { activa?: boolean }) {
         }
       />
 
-      <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={scroll} tabIndex={0} role="region" aria-label="Conversación" className="min-h-0 flex-1 overflow-y-auto">
         <div className={`mx-auto flex min-h-full max-w-[760px] flex-col px-3 ${turnos.length ? "carril" : ""}`}>
           {turnos.length === 0 ? (
             <div className="flex-1">
@@ -103,7 +103,7 @@ export default function Chat({ activa = true }: { activa?: boolean }) {
               {turnos.map((t, i) =>
                 t.role === "user" ? (
                   <div key={i} className="rise-in flex justify-end">
-                    <p className="max-w-[80%] whitespace-pre-wrap border border-line-2 bg-raised px-4 py-2.5 text-body text-ink">
+                    <p className="prosa max-w-[80%] whitespace-pre-wrap border border-line-2 bg-raised px-4 py-2.5 text-[16px] leading-relaxed text-ink">
                       {t.content}
                     </p>
                   </div>

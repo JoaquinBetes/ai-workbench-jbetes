@@ -5,6 +5,7 @@ import Comparador, { MODOS_COMPARADOR, type IdModo } from "./components/comparad
 import Playground from "./components/playground/Playground";
 import { BarraEstado, BarraSuperior, HojaAtajos, PaletaComandos, VISTAS, type IdVista } from "./components/shell/Shell";
 import { escribiendo, useComandos } from "./lib/comandos";
+import { movimiento, useMovimiento } from "./lib/movimiento";
 
 /** Las vistas piden el foco del prompt con este evento (atajo "/"). */
 export const EVENTO_ENFOCAR = "workbench:enfocar-prompt";
@@ -33,10 +34,15 @@ export default function App() {
       return !a;
     });
 
+  // Una vista que ya se mostró no repite sus entradas al volver: cambiar de
+  // vista es frecuente (y muchas veces con el teclado), así que es instantáneo.
+  const [quietas, setQuietas] = useState<Set<IdVista>>(() => new Set());
   const ir = (v: IdVista) => {
+    setQuietas((prev) => (prev.has(vista) ? prev : new Set(prev).add(vista)));
     setVista(v);
     setVisitadas((prev) => (prev.has(v) ? prev : new Set(prev).add(v)));
   };
+  const enMovimiento = useMovimiento();
 
   useComandos("app", [
     ...VISTAS.map((v) => ({
@@ -58,10 +64,17 @@ export default function App() {
     })),
     { id: "atajos", titulo: "Ver los atajos de teclado", grupo: "Ayuda", atajo: ["?"], ejecutar: () => setAtajos(true) },
     {
-      id: "fondo",
-      titulo: fondoApagado ? "Encender el fondo animado" : "Apagar el fondo animado",
+      id: "movimiento",
+      titulo: enMovimiento ? "Pausar las animaciones" : "Reanudar las animaciones",
       grupo: "Apariencia",
-      claves: "ascii animación movimiento",
+      claves: "movimiento animación ascii quieto",
+      ejecutar: movimiento.alternar,
+    },
+    {
+      id: "fondo",
+      titulo: fondoApagado ? "Mostrar la placa del fondo" : "Ocultar la placa del fondo",
+      grupo: "Apariencia",
+      claves: "fondo placa circuito ascii",
       ejecutar: alternarFondo,
     },
   ]);
@@ -128,22 +141,22 @@ export default function App() {
         <main id="contenido" tabIndex={-1} className="relative min-h-0 flex-1 outline-none max-lg:flex-none">
           {/* Las vistas quedan montadas: cambiar de vista no pierde la conversación. */}
           {visitadas.has("playground") && (
-            <div hidden={vista !== "playground"} className="h-full max-lg:h-auto">
+            <div hidden={vista !== "playground"} className={`h-full max-lg:h-auto ${quietas.has("playground") ? "quieta" : ""}`}>
               <Playground activa={vista === "playground"} />
             </div>
           )}
           {visitadas.has("comparador") && (
-            <div hidden={vista !== "comparador"} className="h-full max-lg:h-auto">
+            <div hidden={vista !== "comparador"} className={`h-full max-lg:h-auto ${quietas.has("comparador") ? "quieta" : ""}`}>
               <Comparador activa={vista === "comparador"} modo={modoComparador} onModo={setModoComparador} />
             </div>
           )}
           {visitadas.has("chat") && (
-            <div hidden={vista !== "chat"} className="h-full max-lg:h-auto">
+            <div hidden={vista !== "chat"} className={`h-full max-lg:h-auto ${quietas.has("chat") ? "quieta" : ""}`}>
               <Chat activa={vista === "chat"} />
             </div>
           )}
         </main>
-        <BarraEstado onAtajos={() => setAtajos(true)} fondoApagado={fondoApagado} onFondo={alternarFondo} />
+        <BarraEstado onAtajos={() => setAtajos(true)} />
       </div>
       {paleta && <PaletaComandos onCerrar={() => setPaleta(false)} />}
       {atajos && <HojaAtajos onCerrar={() => setAtajos(false)} />}

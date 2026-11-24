@@ -145,7 +145,7 @@ export function Lectura({
       className={`min-w-0 px-4 py-3 text-left ${onClick ? "transition-colors hover:bg-raised" : ""}`}
     >
       <div className="label truncate">{etiqueta}</div>
-      <div className={`num mt-1 truncate text-[22px] leading-none ${color}`}>
+      <div className={`lectura mt-1 truncate text-[24px] leading-none ${color}`}>
         {valor}
         {unidad && <span className="ml-1 text-label text-muted">{unidad}</span>}
       </div>

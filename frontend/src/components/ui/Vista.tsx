@@ -117,7 +117,7 @@ export function TipGrafico({
 
 /** Ejes de Recharts: discretos, del color de las líneas, con números en mono a 13 px. */
 export const EJE = {
-  tick: { fill: TINTA.apagada, fontSize: 14, fontFamily: '"Terminal", VT323, monospace' },
+  tick: { fill: TINTA.apagada, fontSize: 12, fontFamily: '"IBM Plex Mono", monospace' },
   axisLine: false,
   tickLine: false,
 } as const;

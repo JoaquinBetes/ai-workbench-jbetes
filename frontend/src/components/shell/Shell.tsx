@@ -1,4 +1,4 @@
-import { Columns3, Command, FlaskConical, MessageSquareText, Search } from "lucide-react";
+import { Columns3, Command, FlaskConical, MessageSquareText, Pause, Play, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useListaComandos, type Comando } from "../../lib/comandos";
 import { entero, num, segundos } from "../../lib/formato";
@@ -6,6 +6,7 @@ import { useTelemetria } from "../../lib/telemetria";
 import { BarraTexto, Giro, SparkTexto } from "../ascii/Texto";
 import { Teclas } from "../ui/Controles";
 import Segmentado from "../ui/Segmentado";
+import { movimiento, useMovimiento } from "../../lib/movimiento";
 
 export type IdVista = "playground" | "comparador" | "chat";
 
@@ -93,14 +94,14 @@ export function BarraSuperior({
           type="button"
           onClick={onPaleta}
           aria-label="Abrir la paleta de comandos"
-          className="field flex h-[34px] w-64 items-center gap-2 text-left text-muted transition-colors hover:border-[var(--ink-3)] max-lg:w-auto"
+          className="field flex h-[34px] w-72 items-center gap-2 whitespace-nowrap text-left text-muted transition-colors hover:border-[var(--ink-3)] max-lg:w-auto"
         >
           <Search className="h-3.5 w-3.5" aria-hidden />
-          <span className="flex-1 text-label max-lg:hidden">Buscar o ejecutar…</span>
-          <Teclas teclas={[mac ? "⌘" : "Ctrl", "K"]} />
+          <span className="flex-1 truncate text-label max-lg:hidden">Buscar o ejecutar…</span>
+          <span className="solo-teclado"><Teclas teclas={[mac ? "⌘" : "Ctrl", "K"]} /></span>
         </button>
         <span
-          className="tag max-sm:hidden"
+          className="flex items-center gap-2 text-[12px] text-muted max-sm:hidden"
           data-tip={ok ? `Backend y Ollama responden · ${t.salud?.ollama.host ?? ""}` : t.salud?.ollama.error ?? "Sin conexión con el backend"}
           data-tip-pos="left"
         >
@@ -113,16 +114,9 @@ export function BarraSuperior({
 }
 
 /** Barra de estado: conexión, modelo y la telemetría de la sesión, en vivo y en modo texto. */
-export function BarraEstado({
-  onAtajos,
-  fondoApagado,
-  onFondo,
-}: {
-  onAtajos: () => void;
-  fondoApagado: boolean;
-  onFondo: () => void;
-}) {
+export function BarraEstado({ onAtajos }: { onAtajos: () => void }) {
   const t = useTelemetria();
+  const enMovimiento = useMovimiento();
   const ok = !t.saludError && !!t.salud?.ollama.ok;
   const velocidades = t.historial.map((c) => c.tokS).filter((v): v is number => v !== null);
   const ultima = t.historial[t.historial.length - 1];
@@ -174,15 +168,16 @@ export function BarraEstado({
         <span className="num hidden lg:inline">{entero(t.tokensSesion)} tokens en la sesión</span>
         <button
           type="button"
-          onClick={onFondo}
-          aria-pressed={!fondoApagado}
-          className="dot px-1 transition-colors hover:text-ink"
-          data-tip={fondoApagado ? "Encender el fondo animado" : "Apagar el fondo animado"}
+          onClick={movimiento.alternar}
+          aria-pressed={!enMovimiento}
+          className="dot flex min-h-6 items-center gap-1.5 px-1 transition-colors hover:text-ink"
+          data-tip={enMovimiento ? "Pausar todas las animaciones" : "Reanudar las animaciones"}
           data-tip-pos="top"
         >
-          fondo {fondoApagado ? "apagado" : "vivo"}
+          {enMovimiento ? <Pause className="h-3.5 w-3.5" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}
+          {enMovimiento ? "pausar animaciones" : "animaciones en pausa"}
         </button>
-        <button type="button" onClick={onAtajos} className="dot flex items-center gap-1.5 px-1 transition-colors hover:text-ink">
+        <button type="button" onClick={onAtajos} className="dot flex min-h-6 items-center gap-1.5 px-1 transition-colors hover:text-ink">
           <Command className="h-3.5 w-3.5" aria-hidden />
           atajos
           <kbd className="kbd">?</kbd>

@@ -10,7 +10,8 @@ import LienzoAscii from "./LienzoAscii";
 export default function Fondo({ apagado }: { apagado: boolean }) {
   const [escena] = useState(crearEscenaFondo);
   return (
-    <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
+    // La placa vive en los márgenes: hacia el centro, donde está el trabajo, se apaga.
+    <div className="fondo-placa pointer-events-none fixed inset-0 z-0" aria-hidden>
       {!apagado && <LienzoAscii escena={escena} celda={16} fps={15} interactivo />}
     </div>
   );

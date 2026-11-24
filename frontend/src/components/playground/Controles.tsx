@@ -133,7 +133,7 @@ export default function Controles({
             onPointerEnter={() => setAyuda("system")}
             rows={3}
             placeholder="Sos un asistente que responde en una sola oración."
-            className="field text-label"
+            className="field prosa text-small"
           />
         </Seccion>
       </div>

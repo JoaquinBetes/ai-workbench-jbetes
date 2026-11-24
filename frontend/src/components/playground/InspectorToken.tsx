@@ -87,7 +87,7 @@ export default function InspectorToken({
     return (
       <Vacio escena={escenaOjo} interactiva etiquetaEscena="Un ojo tramado que sigue al puntero" titulo="Elegí un token de una respuesta">
         <p>Vas a ver entre qué opciones dudaba el modelo en ese paso y podés forzar otra.</p>
-        <p className="mt-3 flex items-center justify-center gap-1.5">
+        <p className="solo-teclado mt-3 flex items-center justify-center gap-1.5">
           <Teclas teclas={["←", "→"]} /> para recorrer
         </p>
       </Vacio>
@@ -152,14 +152,12 @@ export default function InspectorToken({
             <dt className="label">Entropía</dt>
             <dd className="num text-small text-ink">{num(bits, 2)} bits</dd>
           </div>
-          <div>
-            <div className="flex items-baseline justify-between gap-2">
-              <dt className="label">Duda</dt>
-              <dd className="num text-small text-doubt">{num(duda(t) * 100, 0)} %</dd>
-            </div>
-            <div className="mt-1.5 h-[3px] overflow-hidden bg-line-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+            <dt className="label">Duda</dt>
+            <dd className="num text-small text-doubt">{num(duda(t) * 100, 0)} %</dd>
+            <dd className="mt-1.5 h-[3px] w-full overflow-hidden bg-line-2" aria-hidden>
               <div className="h-full origin-left bg-doubt" style={{ transform: `scaleX(${duda(t)})` }} />
-            </div>
+            </dd>
           </div>
         </dl>
       </div>

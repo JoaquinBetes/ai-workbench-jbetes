@@ -74,15 +74,22 @@ export function BotonCorrer({
         </button>
       )}
       {corriendo && total ? (
-        <div className="flex items-center justify-between gap-2" aria-hidden>
-          <span className="mono text-label text-ink-3">[</span>
-          <span className="flex-1 overflow-hidden">
+        <div
+          className="flex items-center justify-between gap-2"
+          role="progressbar"
+          aria-label="Progreso de la corrida"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(fraccion * 100)}
+        >
+          <span className="mono text-label text-muted" aria-hidden>[</span>
+          <span className="flex-1 overflow-hidden" aria-hidden>
             <span className="mono block whitespace-pre text-label leading-none">
               <span className="text-accent">{"#".repeat(Math.round(fraccion * 28))}</span>
-              <span className="text-faint">{"·".repeat(28 - Math.round(fraccion * 28))}</span>
+              <span className="pista-punteada inline-block align-middle" style={{ width: `${28 - Math.round(fraccion * 28)}ch` }} />
             </span>
           </span>
-          <span className="mono text-label text-ink-3">]</span>
+          <span className="mono text-label text-muted" aria-hidden>]</span>
         </div>
       ) : null}
     </>
@@ -118,7 +125,7 @@ export function CampoPrompt({
       }}
       rows={filas}
       placeholder={placeholder}
-      className="field resize-none"
+      className="field prosa resize-none"
     />
   );
 }

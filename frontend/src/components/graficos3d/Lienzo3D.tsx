@@ -4,6 +4,7 @@ import { EffectComposer } from "@react-three/postprocessing";
 import { Effect } from "postprocessing";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CanvasTexture, Group, NearestFilter, OrthographicCamera, RepeatWrapping, Uniform } from "three";
+import { useMovimiento } from "../../lib/movimiento";
 
 // Efecto de post-proceso propio: convierte la escena en caracteres según la
 // luminancia de cada celda, pero conserva el color de la celda (así lo elegido
@@ -70,7 +71,6 @@ function Invalidar({ firma }: { firma: string }) {
   return null;
 }
 
-const reducido = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Vaivén: cuando nadie lo toca, el gráfico oscila despacio (±20°) para que se lea el volumen. */
 function Vaiven({ activo, children }: { activo: boolean; children: ReactNode }) {
@@ -125,7 +125,7 @@ export default function Lienzo3D({
   const [visible, setVisible] = useState(true);
   const [tocando, setTocando] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
-  const quieto = reducido();
+  const quieto = !useMovimiento();
 
   useEffect(() => {
     if (!caja.current) return;
@@ -135,7 +135,7 @@ export default function Lienzo3D({
   }, []);
 
   return (
-    <div ref={caja} className="relative" style={{ height: alto }} role="img" aria-label={titulo}>
+    <div ref={caja} className="relative" style={{ height: alto }} role="group" aria-label={titulo}>
       <Canvas
         orthographic
         camera={{ position: posicion, zoom: 40, near: 0.1, far: 200 }}

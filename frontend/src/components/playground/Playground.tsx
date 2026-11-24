@@ -335,7 +335,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
         <Controles config={config} setConfig={setConfig} modelos={modelos} />
 
         <section className="flex min-h-0 flex-col max-xl:row-span-1 max-lg:order-first" aria-label="Conversación">
-          <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto px-2 pb-6 max-lg:overflow-visible max-lg:px-0">
+          <div ref={scroll} tabIndex={0} role="region" aria-label="Respuestas del playground" className="carril-suave min-h-0 flex-1 overflow-y-auto px-2 pb-6 max-lg:overflow-visible max-lg:px-0">
             {turnos.length === 0 ? (
               <ExploradorSampling temperatura={config.temperature} topK={config.top_k} topP={config.top_p} />
             ) : (
@@ -346,7 +346,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
                     return (
                       <div key={i} className="rise-in grid grid-cols-[5.5rem_1fr] gap-3 px-1">
                         <span className="mono pt-0.5 text-label text-muted">entrada {par}</span>
-                        <p className="whitespace-pre-wrap text-body text-ink">{t.content}</p>
+                        <p className="prosa max-w-[68ch] whitespace-pre-wrap text-[16px] leading-relaxed text-ink">{t.content}</p>
                       </div>
                     );
                   }
@@ -390,8 +390,8 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
                         )}
                         <span className="ml-auto flex items-center gap-2">
                           {rama.metodo && (
-                            <span className="tag" data-tip="Cómo siguió el backend la respuesta desde el prefijo" data-tip-pos="left">
-                              {rama.metodo}
+                            <span data-tip="Cómo siguió el backend la respuesta desde el prefijo" data-tip-pos="left">
+                              <span className="tag">{rama.metodo}</span>
                             </span>
                           )}
                           {rama.generando ? (
@@ -423,7 +423,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
                               <span className="inline-block transition-transform group-open:rotate-90">›</span> Razonamiento del modelo
                               <span className="num ml-2 text-muted">{t.thinking.length} caracteres</span>
                             </summary>
-                            <p className="mt-2 whitespace-pre-wrap text-label leading-relaxed text-muted">{t.thinking}</p>
+                            <p className="prosa mt-2 max-w-[68ch] whitespace-pre-wrap text-small leading-relaxed text-muted">{t.thinking}</p>
                           </details>
                         )}
 
@@ -486,7 +486,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
               generando={generando}
               deshabilitado={!config.modelo}
               etiqueta="prompt para el modelo"
-              placeholder="Preguntale algo al modelo y después hacé clic en cualquier token de la respuesta"
+              placeholder="Preguntale algo al modelo"
               chip={config.modelo || "sin modelo"}
               ejemplos={turnos.length ? [] : EJEMPLOS}
             />
