@@ -1,4 +1,6 @@
-import { MessageSquareText, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
+import { escenaEnso } from "../lib/ascii";
+import { Giro } from "./ascii/Texto";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { EVENTO_ENFOCAR } from "../App";
 import { escribiendo, useComandos } from "../lib/comandos";
@@ -7,7 +9,7 @@ import { useModelos } from "../lib/useModelos";
 import { useStreamingChat } from "../lib/useStreamingChat";
 import TextoTokens from "./playground/TextoTokens";
 import { Interruptor } from "./ui/Controles";
-import PromptLuminoso from "./ui/PromptLuminoso";
+import Compositor from "./ui/Compositor";
 import SelectorModelo from "./ui/SelectorModelo";
 import { EncabezadoVista, Vacio } from "./ui/Vista";
 
@@ -67,13 +69,13 @@ export default function Chat({ activa = true }: { activa?: boolean }) {
   );
 
   return (
-    <div className="flex h-full flex-col px-3 pb-3">
+    <div className="flex h-full flex-col px-3 pb-3 max-lg:h-auto max-lg:min-h-[calc(100vh-var(--bar-top)-var(--bar-bottom))]">
       <EncabezadoVista
         titulo="Chat"
         descripcion="Conversación libre con un modelo, con la duda de cada token a la vista."
         acciones={
           <>
-            <div className="w-64">
+            <div className="w-64 max-sm:w-full">
               <SelectorModelo modelos={modelos} valor={modelo} onChange={setModelo} />
             </div>
             <div className="w-44">
@@ -92,7 +94,7 @@ export default function Chat({ activa = true }: { activa?: boolean }) {
         <div className="mx-auto flex min-h-full max-w-[760px] flex-col px-3">
           {turnos.length === 0 ? (
             <div className="flex-1">
-              <Vacio icono={<MessageSquareText />} titulo="Escribile algo al modelo">
+              <Vacio escena={escenaEnso} etiquetaEscena="Un ensō, el círculo zen de un trazo, dibujado con caracteres" titulo="Escribile algo al modelo">
                 Pasá el mouse por un token de la respuesta para ver con qué probabilidad lo eligió.
               </Vacio>
             </div>
@@ -101,7 +103,7 @@ export default function Chat({ activa = true }: { activa?: boolean }) {
               {turnos.map((t, i) =>
                 t.role === "user" ? (
                   <div key={i} className="rise-in flex justify-end">
-                    <p className="max-w-[80%] whitespace-pre-wrap rounded-lg rounded-br-sm border border-line bg-raised px-4 py-2.5 text-body text-ink">
+                    <p className="max-w-[80%] whitespace-pre-wrap border border-line-2 bg-raised px-4 py-2.5 text-body text-ink">
                       {t.content}
                     </p>
                   </div>
@@ -109,7 +111,7 @@ export default function Chat({ activa = true }: { activa?: boolean }) {
                   <div key={i} className="rise-in space-y-2">
                     <div className="flex items-center gap-2 text-label text-muted">
                       <span className="live live--idle" aria-hidden />
-                      <span className="mono">{modelo}</span>
+                      <span className="dot">{modelo}</span>
                     </div>
                     {t.tokens?.length ? (
                       <TextoTokens
@@ -124,7 +126,7 @@ export default function Chat({ activa = true }: { activa?: boolean }) {
                         {t.content}
                         {generando && i === turnos.length - 1 && (
                           <span className="flex items-center gap-2 text-label text-muted">
-                            <span className="spin" aria-hidden /> Pensando…
+                            <Giro /> pensando…
                           </span>
                         )}
                       </div>
@@ -147,8 +149,8 @@ export default function Chat({ activa = true }: { activa?: boolean }) {
         <p className="tag tag--danger mx-auto mb-2 h-auto max-w-[760px] py-1">{error ?? errorModelos}</p>
       )}
 
-      <div className="mx-auto w-full max-w-[784px] px-3 pt-2">
-        <PromptLuminoso
+      <div className="mx-auto w-full max-w-[784px] px-3 pt-2 max-lg:sticky max-lg:bottom-0 max-lg:z-30 max-lg:bg-[var(--bg)] max-lg:pb-2">
+        <Compositor
           entradaRef={prompt}
           valor={entrada}
           onCambio={setEntrada}
@@ -156,7 +158,7 @@ export default function Chat({ activa = true }: { activa?: boolean }) {
           onDetener={detener}
           generando={generando}
           deshabilitado={!modelo}
-          etiqueta="Mensaje para el modelo"
+          etiqueta="mensaje para el modelo"
           placeholder="Escribí tu mensaje"
           chip={modelo || "sin modelo"}
           ejemplos={turnos.length ? [] : ["¿Qué es un token?", "Recomendame un libro de ciencia ficción corto"]}

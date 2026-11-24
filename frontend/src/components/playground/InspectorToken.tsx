@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, GitBranch, MousePointerClick } from "lucide-reac
 import type { TokenLogprob } from "../../lib/api";
 import { num } from "../../lib/formato";
 import { alternativas, duda, entropia, mostrarToken, pct, prob } from "../../lib/probs";
+import { BarraTexto } from "../ascii/Texto";
 import { Teclas } from "../ui/Controles";
 import { Vacio } from "../ui/Vista";
 
@@ -27,20 +28,20 @@ function Medidor({ p }: { p: number }) {
   const L = Math.PI * R;
   const cx = 72;
   const cy = 72;
-  const color = p >= 0.5 ? "var(--accent)" : "var(--doubt)";
+  const color = p >= 0.5 ? "var(--ink)" : "var(--doubt)";
   const arco = `M ${cx - R} ${cy} A ${R} ${R} 0 0 1 ${cx + R} ${cy}`;
   return (
     <div className="relative h-[80px] w-[144px]">
       <svg width="144" height="80" viewBox="0 0 144 80" aria-hidden>
-        <path d={arco} fill="none" stroke="var(--line-2)" strokeWidth="5" strokeLinecap="round" />
+        <path d={arco} fill="none" stroke="var(--line-2)" strokeWidth="5" strokeLinecap="butt" strokeDasharray="2 2" />
         <path
           d={arco}
           fill="none"
           stroke={color}
           strokeWidth="5"
-          strokeLinecap="round"
+          strokeLinecap="butt"
           strokeDasharray={`${Math.max(0.001, p * L)} ${L}`}
-          style={{ transition: "stroke-dasharray 200ms var(--ease)", filter: `drop-shadow(0 0 6px color-mix(in oklab, ${color} 45%, transparent))` }}
+          style={{ transition: "stroke-dasharray 200ms var(--ease)" }}
         />
         {[0.25, 0.5, 0.75].map((x) => {
           const a = Math.PI * (1 - x);
@@ -135,7 +136,7 @@ export default function InspectorToken({
       <div className="well mono overflow-hidden px-3 py-2.5 text-label leading-relaxed text-muted">
         <span className="opacity-60">…</span>
         <span className="whitespace-pre-wrap break-words">{previos}</span>
-        <span className="rounded-[3px] bg-accent px-1 py-px text-[var(--accent-ink)]">{mostrarToken(t.token)}</span>
+        <span className="bg-ink px-1 py-px text-[var(--bg)]">{mostrarToken(t.token)}</span>
       </div>
 
       {/* Lecturas */}
@@ -155,8 +156,8 @@ export default function InspectorToken({
               <dt className="label">Duda</dt>
               <dd className="num text-small text-doubt">{num(duda(t) * 100, 0)} %</dd>
             </div>
-            <div className="mt-1.5 h-[3px] overflow-hidden rounded-full bg-line-2">
-              <div className="h-full origin-left rounded-full bg-doubt" style={{ transform: `scaleX(${duda(t)})` }} />
+            <div className="mt-1.5 h-[3px] overflow-hidden bg-line-2">
+              <div className="h-full origin-left bg-doubt" style={{ transform: `scaleX(${duda(t)})` }} />
             </div>
           </div>
         </dl>
@@ -175,22 +176,12 @@ export default function InspectorToken({
             return (
               <li key={a.token}>
                 <div
-                  className="group grid grid-cols-[20px_minmax(0,7.5rem)_1fr_auto] items-center gap-2.5 rounded-md px-2 py-1.5"
-                  style={a.elegido ? { background: "var(--accent-soft)" } : undefined}
+                  className="group grid grid-cols-[20px_minmax(0,6.5rem)_1fr_auto] items-center gap-2.5 px-2 py-1.5"
+                  style={a.elegido ? { background: "var(--raised)", outline: "1px solid var(--line-2)" } : undefined}
                 >
-                  <span className="num text-center text-label text-muted">{a.elegido ? "●" : n <= 9 ? n : ""}</span>
+                  <span className="num text-center text-label text-muted">{a.elegido ? <span className="text-accent">■</span> : n <= 9 ? n : ""}</span>
                   <span className={`mono truncate text-label ${a.elegido ? "text-ink" : "text-ink-2"}`}>{mostrarToken(a.token)}</span>
-                  <span className="relative h-[6px] overflow-hidden rounded-full bg-line">
-                    <span
-                      className="absolute inset-y-0 left-0 origin-left rounded-full"
-                      style={{
-                        width: "100%",
-                        transform: `scaleX(${a.p / max})`,
-                        background: a.elegido ? "var(--accent)" : "color-mix(in oklab, var(--ink) 38%, transparent)",
-                        transition: "transform 200ms var(--ease)",
-                      }}
-                    />
-                  </span>
+                  <BarraTexto valor={a.p / max} largo={10} tono={a.elegido ? "ink" : "muted"} className="overflow-hidden" />
                   <span className="flex items-center gap-2">
                     <span className="num w-[4.2rem] text-right text-label text-ink-2">{pct(a.p)}</span>
                     {!a.elegido && onBifurcar && (

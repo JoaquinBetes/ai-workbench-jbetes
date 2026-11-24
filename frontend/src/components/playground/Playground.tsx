@@ -1,13 +1,16 @@
 import { ChevronLeft, ChevronRight, GitFork, RotateCcw, ScanSearch } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { EVENTO_ENFOCAR } from "../../App";
-import { streamContinue, type ChatMessage } from "../../lib/api";
+import { streamContinue, type ChatMessage, type TokenLogprob } from "../../lib/api";
 import { escribiendo, useComandos } from "../../lib/comandos";
+import { crestasDeTokens } from "../../lib/paisaje";
 import { mostrarToken } from "../../lib/probs";
 import { ID_RAIZ, nuevoId, textoDe, type Rama } from "../../lib/ramas";
 import { useModelos } from "../../lib/useModelos";
 import { useStreamingChat, type Parametros } from "../../lib/useStreamingChat";
-import PromptLuminoso from "../ui/PromptLuminoso";
+import { Giro } from "../ascii/Texto";
+import { Cordillera } from "../graficos3d";
+import Compositor from "../ui/Compositor";
 import Segmentado from "../ui/Segmentado";
 import { EncabezadoVista, Vacio } from "../ui/Vista";
 import ArbolRamas from "./ArbolRamas";
@@ -43,6 +46,58 @@ const parametrosDe = (c: Config): Parametros => ({
 
 const dosCifras = (n: number) => String(n).padStart(2, "0");
 
+/** Debajo de cada respuesta: la traza de duda (2D) o el paisaje de probabilidades (3D). */
+function GraficoRespuesta({
+  tokens,
+  desde,
+  sel,
+  en3D,
+  onVista,
+  onSeleccionar,
+}: {
+  tokens: TokenLogprob[];
+  desde: number;
+  sel: number | null;
+  en3D: boolean;
+  onVista: (v: "traza" | "3d") => void;
+  onSeleccionar: (i: number) => void;
+}) {
+  const crestas = useMemo(() => (en3D ? crestasDeTokens(tokens) : []), [en3D, tokens]);
+  const selFila = sel === null ? null : crestas.findIndex((c) => c.indice === sel);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <Segmentado
+          etiqueta="Cómo ver la respuesta"
+          sm
+          valor={en3D ? "3d" : "traza"}
+          onChange={onVista}
+          opciones={[
+            { valor: "traza", etiqueta: "traza de duda" },
+            { valor: "3d", etiqueta: "paisaje 3D" },
+          ]}
+        />
+        {en3D && <span className="label max-sm:hidden">una cresta por token · al centro, la opción más probable</span>}
+      </div>
+      {en3D ? (
+        <div className="well">
+          <Cordillera
+            titulo="Paisaje de probabilidades: una cresta por token, con sus alternativas de más a menos probable"
+            filas={crestas.map((c) => ({ etiqueta: c.etiqueta, valores: c.valores, marca: c.marca }))}
+            seleccion={selFila !== null && selFila >= 0 ? selFila : null}
+            onSeleccionar={(f) => onSeleccionar(crestas[f].indice)}
+            ejeX={["menos", "más probable", "menos"]}
+            ejeZ={["inicio", "fin"]}
+            alto={300}
+          />
+        </div>
+      ) : (
+        <TrazaConfianza tokens={tokens} desde={desde} seleccionado={sel} onSeleccionar={onSeleccionar} />
+      )}
+    </div>
+  );
+}
+
 export default function Playground({ activa = true }: { activa?: boolean }) {
   const { modelos, preferido } = useModelos();
   const [config, setConfig] = useState<Config>(CONFIG_INICIAL);
@@ -50,6 +105,9 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
   const [seleccion, setSeleccion] = useState<Seleccion>(null);
   const [entrada, setEntrada] = useState("");
   const [panel, setPanel] = useState<"inspector" | "ramas">("inspector");
+  // Qué respuesta muestra el paisaje 3D (uno solo a la vez: cada uno es un contexto WebGL).
+  // null = la última respuesta; -1 = ninguna.
+  const [turno3D, setTurno3D] = useState<number | null>(null);
   const [turnoVista, setTurnoVista] = useState<number | null>(null);
   const { turnos, generando, error, enviar, detener, reiniciar } = useStreamingChat();
 
@@ -252,7 +310,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
   // --- Vista -----------------------------------------------------------------
 
   return (
-    <div className="flex h-full flex-col px-3 pb-3">
+    <div className="flex h-full flex-col px-3 pb-3 max-lg:h-auto">
       <EncabezadoVista
         capitulo="Cap. 2"
         titulo="Playground de sampling"
@@ -273,11 +331,11 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
         }
       />
 
-      <div className="grid min-h-0 flex-1 grid-cols-[17.5rem_minmax(0,1fr)_23rem] gap-3">
+      <div className="grid min-h-0 flex-1 grid-cols-[17.5rem_minmax(0,1fr)_23rem] gap-3 max-xl:grid-cols-[16rem_minmax(0,1fr)] max-lg:grid-cols-1">
         <Controles config={config} setConfig={setConfig} modelos={modelos} />
 
-        <section className="flex min-h-0 flex-col" aria-label="Conversación">
-          <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto px-2 pb-6">
+        <section className="flex min-h-0 flex-col max-xl:row-span-1 max-lg:order-first" aria-label="Conversación">
+          <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto px-2 pb-6 max-lg:overflow-visible max-lg:px-0">
             {turnos.length === 0 ? (
               <ExploradorSampling temperatura={config.temperature} topK={config.top_k} topP={config.top_p} />
             ) : (
@@ -308,7 +366,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
                         <span className="mono text-label text-muted">salida {par}</span>
                         <span className="mono truncate text-label text-ink-2">{contextos[i]?.modelo ?? config.modelo}</span>
                         {ramas.length > 1 && (
-                          <span className="flex items-center gap-1 rounded-md border border-line bg-sunken p-0.5">
+                          <span className="flex items-center gap-1 border border-line bg-sunken p-0.5">
                             <button type="button" onClick={() => cambiarRama(-1)} className="btn btn--sm btn--icon btn--quiet h-6 w-6" aria-label="Rama anterior">
                               <ChevronLeft aria-hidden />
                             </button>
@@ -324,7 +382,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
                         {rama.corte !== null && (
                           <span className="hidden items-center gap-1.5 text-label text-muted lg:flex">
                             forzó
-                            <span className="mono rounded-[3px] bg-accent px-1 text-[var(--accent-ink)]">
+                            <span className="mono bg-accent px-1 text-[var(--accent-ink)]">
                               {mostrarToken(rama.tokens[rama.corte].token)}
                             </span>
                             <span className="num">en #{rama.corte + 1}</span>
@@ -338,11 +396,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
                           )}
                           {rama.generando ? (
                             <span className="flex items-center gap-2 text-label text-accent">
-                              <span className="level" aria-hidden>
-                                <i />
-                                <i />
-                                <i />
-                              </span>
+                              <Giro />
                               <span className="num">{rama.tokens.length} tokens</span>
                             </span>
                           ) : (
@@ -387,7 +441,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
                             {t.content}
                             {rama.generando && (
                               <span className="flex items-center gap-2 text-label text-muted">
-                                <span className="spin" aria-hidden /> Cargando el modelo y leyendo el prompt…
+                                <Giro /> Cargando el modelo y leyendo el prompt…
                               </span>
                             )}
                           </div>
@@ -395,10 +449,12 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
                         {rama.error && <p className="tag tag--danger h-auto py-1">{rama.error}</p>}
 
                         {rama.tokens.length > 1 && (
-                          <TrazaConfianza
+                          <GraficoRespuesta
                             tokens={rama.tokens}
                             desde={desde}
-                            seleccionado={sel}
+                            sel={sel}
+                            en3D={!rama.generando && (turno3D === null ? i === ultimoAsistente : turno3D === i)}
+                            onVista={(v) => setTurno3D(v === "3d" ? i : -1)}
                             onSeleccionar={(indice) => setSeleccion({ turno: i, rama: rama.id, indice })}
                           />
                         )}
@@ -420,8 +476,8 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
 
           {error && <p className="tag tag--danger mx-auto mb-3 h-auto max-w-[780px] py-1">{error}</p>}
 
-          <div className="enter mx-auto w-full max-w-[804px] px-3 pt-2" style={{ ["--delay" as string]: "200ms" }}>
-            <PromptLuminoso
+          <div className="enter mx-auto w-full max-w-[804px] px-3 pt-2 max-lg:sticky max-lg:bottom-0 max-lg:z-30 max-lg:bg-[var(--bg)] max-lg:pb-2" style={{ ["--delay" as string]: "200ms" }}>
+            <Compositor
               entradaRef={prompt}
               valor={entrada}
               onCambio={setEntrada}
@@ -429,7 +485,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
               onDetener={detener}
               generando={generando}
               deshabilitado={!config.modelo}
-              etiqueta="Prompt para el modelo"
+              etiqueta="prompt para el modelo"
               placeholder="Preguntale algo al modelo y después hacé clic en cualquier token de la respuesta"
               chip={config.modelo || "sin modelo"}
               ejemplos={turnos.length ? [] : EJEMPLOS}
@@ -437,7 +493,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
           </div>
         </section>
 
-        <aside className="panel enter flex min-h-0 flex-col" style={{ ["--delay" as string]: "120ms" }} aria-label="Inspector y ramas">
+        <aside className="panel enter flex min-h-0 flex-col max-xl:col-span-2 max-xl:h-[520px] max-lg:col-span-1" style={{ ["--delay" as string]: "120ms" }} aria-label="Inspector y ramas">
           <div className="border-b border-line p-2">
             <Segmentado
               etiqueta="Panel lateral"

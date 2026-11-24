@@ -84,7 +84,7 @@ export default function Controles({
           </Interruptor>
         </Seccion>
 
-        <Seccion titulo="Sampling">
+        <Seccion titulo="Muestreo">
           <Segmentado
             etiqueta="Presets de sampling"
             sm
@@ -124,14 +124,14 @@ export default function Controles({
           <Deslizador etiqueta="Máximo de tokens" valor={config.max_tokens} min={16} max={2048} paso={16} onChange={(v) => cambiar("max_tokens", v)} onAyuda={() => setAyuda("max_tokens")} />
         </Seccion>
 
-        <Seccion titulo="System prompt">
+        <Seccion titulo="System prompt" para="system-prompt">
           <textarea
+            id="system-prompt"
             value={config.system}
             onChange={(e) => cambiar("system", e.target.value)}
             onFocus={() => setAyuda("system")}
             onPointerEnter={() => setAyuda("system")}
             rows={3}
-            aria-label="System prompt"
             placeholder="Sos un asistente que responde en una sola oración."
             className="field text-label"
           />
