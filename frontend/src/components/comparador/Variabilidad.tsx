@@ -40,7 +40,8 @@ const recortar = (t: string, n = 42) => (t.length > n ? `${t.slice(0, n)}…` : 
 
 // Tonos para los grupos que no son el mayoritario: grises de la tinta, del más al menos frecuente.
 const tonoGrupo = (i: number) =>
-  i === 0 ? "var(--accent)" : `color-mix(in oklab, var(--ink) ${Math.max(18, 52 - i * 8)}%, transparent)`;
+  // el resto, en fósforo cada vez más tenue; nunca tan claro que el número pierda contraste (≥ 4,5:1)
+  i === 0 ? "var(--accent)" : `color-mix(in oklab, var(--ink) ${Math.max(10, 30 - i * 5)}%, transparent)`;
 
 /** Un gráfico de línea chico contra la temperatura (uno por medida: nunca dos ejes). */
 function Tendencia({ datos, clave, titulo, formato }: { datos: Corrida[]; clave: "distintas" | "entropia"; titulo: string; formato: (v: number) => string }) {
@@ -367,7 +368,7 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
                       </button>
                     )}
                   </div>
-                  <ul className="max-h-80 divide-y divide-line overflow-y-auto">
+                  <ul tabIndex={0} aria-label="Respuestas agrupadas" className="max-h-80 divide-y divide-line overflow-y-auto">
                     {muestras
                       .filter((m) => !grupoSel || grupos[indiceGrupo.get(m.n) ?? -1]?.clave === grupoSel)
                       .map((m) => {
@@ -379,7 +380,7 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
                               <span className="h-2 w-2" style={{ background: m.error ? "var(--danger)" : tonoGrupo(g ?? 9) }} aria-hidden />
                               {m.n}
                             </span>
-                            <span className="line-clamp-3 whitespace-pre-wrap text-label text-ink-2">
+                            <span className="prosa line-clamp-3 whitespace-pre-wrap text-small text-ink-2">
                               {m.error ? <span className="text-danger">{m.error}</span> : m.texto.trim() || "(vacía)"}
                             </span>
                             <span className="num text-right text-label text-muted">
