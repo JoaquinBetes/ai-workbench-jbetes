@@ -1,10 +1,11 @@
-import { ArrowLeft, ArrowRight, GitBranch, MousePointerClick } from "lucide-react";
+import { ArrowLeft, ArrowRight, GitBranch } from "lucide-react";
 import type { TokenLogprob } from "../../lib/api";
 import { num } from "../../lib/formato";
 import { alternativas, duda, entropia, mostrarToken, pct, prob } from "../../lib/probs";
 import { BarraTexto } from "../ascii/Texto";
 import { Teclas } from "../ui/Controles";
 import { Vacio } from "../ui/Vista";
+import { escenaOjo } from "../../lib/ascii";
 
 const CONTEXTO = 10; // tokens previos que se muestran para ubicar el token
 
@@ -84,7 +85,7 @@ export default function InspectorToken({
 }) {
   if (!tokens || indice === null || !tokens[indice]) {
     return (
-      <Vacio icono={<MousePointerClick />} titulo="Elegí un token de una respuesta">
+      <Vacio escena={escenaOjo} interactiva etiquetaEscena="Un ojo tramado que sigue al puntero" titulo="Elegí un token de una respuesta">
         <p>Vas a ver entre qué opciones dudaba el modelo en ese paso y podés forzar otra.</p>
         <p className="mt-3 flex items-center justify-center gap-1.5">
           <Teclas teclas={["←", "→"]} /> para recorrer

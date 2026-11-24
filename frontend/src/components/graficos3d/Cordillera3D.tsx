@@ -3,6 +3,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { useMemo, useState } from "react";
 import { BufferAttribute, Color, DoubleSide, Shape, ShapeGeometry } from "three";
 import Lienzo3D from "./Lienzo3D";
+import { TINTA } from "../../lib/tintas";
 
 export type FilaCordillera = {
   /** texto corto para el tooltip */
@@ -11,7 +12,7 @@ export type FilaCordillera = {
   valores: number[];
   /** índice del punto a marcar (por ejemplo, el token elegido) */
   marca?: number | null;
-  /** color de la línea; por defecto washi */
+  /** color de la línea; por defecto fósforo suave */
   color?: string;
 };
 
@@ -39,7 +40,7 @@ function Cresta({
 }) {
   const n = fila.valores.length;
   const xs = (i: number) => -ANCHO / 2 + (i / Math.max(1, n - 1)) * ANCHO;
-  const color = activa ? "#c2583f" : sobre ? "#ffffff" : fila.color ?? "#ece8dc";
+  const color = activa ? TINTA.senal : sobre ? TINTA.serigrafia : fila.color ?? TINTA.tinta;
 
   // Superficie bajo la línea: tapa las crestas de atrás (el clásico "joyplot").
   // En modo ASCII se ilumina de abajo hacia arriba para que los caracteres tengan relieve.
@@ -71,16 +72,16 @@ function Cresta({
     <group position={[0, 0, z]}>
       <mesh geometry={geometria} onPointerOver={onSobre} onPointerOut={onSalir} onClick={onClick}>
         {ascii ? (
-          <meshBasicMaterial key="ascii" vertexColors color="#ffffff" side={DoubleSide} />
+          <meshBasicMaterial key="ascii" vertexColors color="white" side={DoubleSide} />
         ) : (
-          <meshBasicMaterial key="lineas" color="#050505" side={DoubleSide} polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={1} />
+          <meshBasicMaterial key="lineas" color={TINTA.fondo} side={DoubleSide} polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={1} />
         )}
       </mesh>
       {!ascii && <Line points={puntos} color={color} lineWidth={activa || sobre ? 2.2 : 1.15} transparent opacity={activa || sobre ? 1 : 0.82} />}
       {fila.marca !== null && fila.marca !== undefined && fila.valores[fila.marca] !== undefined && (
         <mesh position={[xs(fila.marca), fila.valores[fila.marca] * ALTO + 0.06, 0.01]}>
           <boxGeometry args={[0.09, 0.09, 0.09]} />
-          <meshBasicMaterial color={activa ? "#ece8dc" : "#c2583f"} />
+          <meshBasicMaterial color={activa ? TINTA.tinta : TINTA.senal} />
         </mesh>
       )}
     </group>
@@ -123,18 +124,18 @@ export default function Cordillera3D({
     <Lienzo3D titulo={titulo} firma={firma} alto={alto} extra={extra} escena={[ANCHO + 3.5, ALTO + fondo * 0.5 + 1.4]}>
       {(ascii) => (
         <group position={[0, -0.9, 0]}>
-          {/* piso: marco y marcas de registro */}
+          {/* piso: marco y marcas de escala */}
           <Line
             points={[
               [-ANCHO / 2, 0, z0 - 0.3], [ANCHO / 2, 0, z0 - 0.3], [ANCHO / 2, 0, -z0 + 0.3], [-ANCHO / 2, 0, -z0 + 0.3], [-ANCHO / 2, 0, z0 - 0.3],
             ]}
-            color="#ece8dc"
+            color={TINTA.tinta}
             transparent
             opacity={0.18}
             lineWidth={1}
           />
           {Array.from({ length: 9 }, (_, i) => -ANCHO / 2 + (i * ANCHO) / 8).map((x) => (
-            <Line key={x} points={[[x, 0, -z0 + 0.3], [x, 0, -z0 + 0.5]]} color="#ece8dc" transparent opacity={0.35} lineWidth={1} />
+            <Line key={x} points={[[x, 0, -z0 + 0.3], [x, 0, -z0 + 0.5]]} color={TINTA.tinta} transparent opacity={0.35} lineWidth={1} />
           ))}
           {/* de atrás hacia adelante: así cada superficie tapa la de atrás */}
           {filas.map((f, i) => (

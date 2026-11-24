@@ -7,16 +7,14 @@ import { join, relative } from "node:path";
 
 const raiz = new URL("../src/", import.meta.url).pathname;
 
-// Archivos donde un color crudo está permitido: los tokens, las tintas del motor ASCII
-// (el canvas necesita un color concreto si la variable no está) y los gráficos
-// (three.js y recharts necesitan el hex, no la variable CSS).
+// Archivos donde un color crudo está permitido: los tokens, su copia en hex para
+// three.js y recharts (lib/tintas.ts), los colores de reserva del lienzo ASCII y
+// la máscara blanca de glifos del efecto ASCII 3D.
 const HEX_PERMITIDO = [
   "index.css",
-  "lib/ascii.ts",
+  "lib/tintas.ts",
   "components/ascii/LienzoAscii.tsx",
-  "components/graficos3d/",
-  "components/comparador/comun.tsx",
-  "components/ui/Vista.tsx",
+  "components/graficos3d/Lienzo3D.tsx",
 ];
 
 const REGLAS = [
@@ -29,6 +27,11 @@ const REGLAS = [
     nombre: "sin-degradado-en-texto",
     regla: "DESIGN.md › Tipografía: el texto nunca lleva degradado",
     patron: /background-clip:\s*text|bg-clip-text/,
+  },
+  {
+    nombre: "sin-japones",
+    regla: "DESIGN.md › Mundo: nada de kanji, kana ni estética japonesa (fue un malentendido)",
+    patron: /[\u3040-\u30ff\u3400-\u9fff\uff66-\uff9f]/,
   },
   {
     nombre: "sin-tema-claro",
@@ -60,6 +63,12 @@ for (const ruta of archivos(raiz)) {
       hallazgos.push(`${rel}:${i + 1}  color-crudo  (DESIGN.md › Color: los colores salen de los tokens de index.css)\n    ${linea.trim()}`);
     }
   });
+}
+
+// lib/tintas.ts es una copia de los tokens: cada hex tiene que existir en index.css.
+const css = readFileSync(join(raiz, "index.css"), "utf8").toLowerCase();
+for (const hex of readFileSync(join(raiz, "lib/tintas.ts"), "utf8").match(/#[0-9a-fA-F]{6}\b/g) ?? []) {
+  if (!css.includes(hex.toLowerCase())) hallazgos.push(`lib/tintas.ts  tinta-suelta  ${hex} no está en index.css (DESIGN.md › Color)`);
 }
 
 if (hallazgos.length) {

@@ -38,7 +38,8 @@ ai-workbench-jbetes/
 │       ├── App.tsx                 shell: vistas, atajos globales, paleta de comandos, fondo vivo
 │       ├── index.css               sistema visual (tokens, paneles, botones, movimiento)
 │       ├── lib/
-│       │   ├── ascii.ts            motor de arte ASCII: tintas, ruido y escenas animadas
+│       │   ├── ascii.ts            motor de arte ASCII: placa con pulsos, chip, globo, ojo y más
+│       │   ├── tintas.ts           los colores de index.css en hex, para three.js y recharts
 │       │   ├── paisaje.ts          datos de la cordillera 3D (una cresta por token)
 │       │   ├── api.ts              cliente de la API (incluye el lector de SSE)
 │       │   ├── telemetria.ts       velocidad en vivo, historial de la sesión, salud
@@ -71,7 +72,8 @@ ai-workbench-jbetes/
 - [x] **Cap. 2 · Entrega 3b — Variabilidad:** el mismo prompt N veces, histograma de respuestas, respuesta mayoritaria, entropía e historial por temperatura
 - [x] **Cap. 2 · Entrega 3c — Salidas estructuradas:** solo prompt vs. post-proceso vs. sampling restringido, con validez, esquema y exactitud
 - [x] **Rediseño de la interfaz:** sistema visual propio, barra de estado con telemetría en vivo, paleta de comandos y atajos de teclado
-- [x] **Modo texto:** estética de arte ASCII japonés en blanco y negro, escenas animadas, gráficos 3D con modo ASCII
+- [x] **Modo texto:** arte ASCII animado y gráficos 3D con modo ASCII
+- [x] **Fósforo:** consola de los 90 en verde fósforo sobre una placa de circuito; cada token dispara un pulso
 - [ ] **Cap. 3-4 — Arena y evaluador:** comparaciones a ciegas, ranking Elo, datasets de prueba, LLM juez
 - [ ] **Cap. 5 — Prompt studio:** versionado, A/B, pruebas de inyección
 - [ ] **Cap. 6 — RAG y agentes:** documentos, chunks, mapa de embeddings, trazas de agente
@@ -81,18 +83,20 @@ ai-workbench-jbetes/
 
 ## Interfaz
 
-"Modo texto": tinta sumi sobre papel washi, dibujado con caracteres. Casi todo es blanco y
-negro; el color aparece diluido y solo donde significa algo (bermellón para la señal, ocre
-para la duda). Las reglas completas están en [DESIGN.md](DESIGN.md).
+"Fósforo": una consola de los 90 en verde fósforo, con arte ASCII animado, montada sobre una
+placa de circuito. El negro manda y el verde es la voz; ámbar para la duda y rojo para los
+errores. Las reglas completas están en [DESIGN.md](DESIGN.md).
 
-- **Arte ASCII vivo:** un campo de niebla de caracteres detrás de todo que sigue al mouse, y
-  escenas animadas en los estados vacíos (Fuji ukiyo-e, ensō, toro, lluvia de muestras, cubo).
-  Se apaga desde la barra de estado ("fondo vivo") o la paleta de comandos.
-- **Gráficos 3D:** la respuesta del playground como cordillera (una cresta por token, con la
-  distribución de alternativas), resúmenes del comparador y el histograma de variabilidad en
-  barras 3D. Se giran con el mouse y tienen un modo ASCII.
-- **Letras:** Zen Antique (títulos), DotGothic16 (lecturas y números) y M PLUS 1 Code (interfaz
-  y texto del modelo). Están dentro del proyecto, así que funciona sin internet.
+- **La placa del fondo trabaja con el modelo:** pistas, vías y chips con nombres de las piezas
+  de un modelo (ATTN, SOFTMAX, KV CACHE…). Cada token que llega dispara un pulso que recorre
+  una pista. Se apaga desde la barra de estado ("fondo vivo") o la paleta de comandos.
+- **Arte ASCII animado** en los estados vacíos: un chip que sortea tokens, un globo de
+  ciberespacio, un ojo tramado que sigue al puntero, el toro de Sloane, lluvia de muestras y un cubo.
+- **Gráficos 3D:** la respuesta del playground como cordillera (una cresta por token), resúmenes
+  del comparador y el histograma de variabilidad en barras 3D. Se giran con el mouse y tienen un
+  modo ASCII.
+- **Letras:** VT323 (títulos, números, etiquetas) e IBM Plex Mono (interfaz y texto del modelo).
+  Están dentro del proyecto, así que funciona sin internet.
 - Con "reducir movimiento" activado en el sistema, las escenas quedan quietas en un cuadro.
 
 | Atajo | Qué hace |

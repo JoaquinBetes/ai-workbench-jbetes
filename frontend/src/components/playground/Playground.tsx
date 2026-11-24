@@ -331,7 +331,7 @@ export default function Playground({ activa = true }: { activa?: boolean }) {
         }
       />
 
-      <div className="grid min-h-0 flex-1 grid-cols-[17.5rem_minmax(0,1fr)_23rem] gap-3 max-xl:grid-cols-[16rem_minmax(0,1fr)] max-lg:grid-cols-1">
+      <div className="grid min-h-0 flex-1 grid-cols-[18.5rem_minmax(0,1fr)_23rem] gap-3 max-xl:grid-cols-[17rem_minmax(0,1fr)] max-lg:grid-cols-1">
         <Controles config={config} setConfig={setConfig} modelos={modelos} />
 
         <section className="flex min-h-0 flex-col max-xl:row-span-1 max-lg:order-first" aria-label="Conversación">

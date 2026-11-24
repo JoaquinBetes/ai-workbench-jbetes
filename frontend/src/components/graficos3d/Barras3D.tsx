@@ -1,6 +1,7 @@
 import { Edges, Html } from "@react-three/drei";
 import { useState } from "react";
 import Lienzo3D from "./Lienzo3D";
+import { TINTA } from "../../lib/tintas";
 
 export type SerieBarras = { etiqueta: string; color: string };
 
@@ -47,7 +48,7 @@ export default function Barras3D({
           series.map((__, z) => (
             <mesh key={`p${x}-${z}`} position={[x * PASO_X, -0.001, z * PASO_Z]} rotation={[-Math.PI / 2, 0, 0]}>
               <planeGeometry args={[LADO + 0.3, LADO + 0.3]} />
-              <meshBasicMaterial color="#ece8dc" transparent opacity={0.04} />
+              <meshBasicMaterial color={TINTA.tinta} transparent opacity={0.04} />
             </mesh>
           )),
         )}
@@ -72,8 +73,8 @@ export default function Barras3D({
                 }}
               >
                 <boxGeometry args={[LADO, h, LADO]} />
-                <meshLambertMaterial color={activa ? "#ece8dc" : s.color} />
-                <Edges color={activa ? "#ffffff" : "#050505"} threshold={15} />
+                <meshLambertMaterial color={activa ? TINTA.senal : s.color} />
+                <Edges color={activa ? TINTA.serigrafia : TINTA.fondo} threshold={15} />
               </mesh>
             );
           }),

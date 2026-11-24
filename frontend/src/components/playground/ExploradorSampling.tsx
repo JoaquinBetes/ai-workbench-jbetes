@@ -1,4 +1,5 @@
-import { escenaFuji } from "../../lib/ascii";
+import { useState } from "react";
+import { crearEscenaChip } from "../../lib/ascii";
 import { num } from "../../lib/formato";
 import LienzoAscii from "../ascii/LienzoAscii";
 import { BarraTexto, Decodificar } from "../ascii/Texto";
@@ -47,6 +48,7 @@ export default function ExploradorSampling({
   topK: number;
   topP: number;
 }) {
+  const [chip] = useState(() => crearEscenaChip(CANDIDATOS.map(([t]) => t)));
   const filas = distribucion(temperatura, topK, topP);
   const enJuego = filas.filter((f) => !f.fuera);
   const total = enJuego.reduce((s, f) => s + f.p, 0) || 1;
@@ -60,7 +62,7 @@ export default function ExploradorSampling({
     <div className="enter mx-auto w-full max-w-[720px] pb-4 pt-2" style={{ ["--delay" as string]: "140ms" }}>
       <div className="panel overflow-hidden">
         <div className="h-[200px] border-b border-line bg-sunken">
-          <LienzoAscii escena={escenaFuji} celda={11} fps={12} etiqueta="El monte Fuji, el sol y el mar, dibujados con caracteres" />
+          <LienzoAscii escena={chip} celda={12} fps={15} etiqueta="Un chip con pistas: entran señales por la izquierda y salen tokens por la derecha" />
         </div>
         <div className="px-5 pb-1 pt-5">
           <h2 className="display text-[32px] leading-[1.1] text-ink">
@@ -119,7 +121,7 @@ export default function ExploradorSampling({
       </div>
       <p className="hint mt-3">
         Escribí un prompt abajo: en la respuesta real cada token se puede inspeccionar, la duda del modelo queda
-        subrayada en ocre y el paisaje 3D muestra la distribución de cada paso.
+        subrayada en ámbar y el paisaje 3D muestra la distribución de cada paso.
       </p>
     </div>
   );

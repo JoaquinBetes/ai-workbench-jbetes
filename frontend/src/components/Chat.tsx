@@ -1,5 +1,5 @@
 import { RotateCcw } from "lucide-react";
-import { escenaEnso } from "../lib/ascii";
+import { escenaGlobo } from "../lib/ascii";
 import { Giro } from "./ascii/Texto";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { EVENTO_ENFOCAR } from "../App";
@@ -91,10 +91,10 @@ export default function Chat({ activa = true }: { activa?: boolean }) {
       />
 
       <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex min-h-full max-w-[760px] flex-col px-3">
+        <div className={`mx-auto flex min-h-full max-w-[760px] flex-col px-3 ${turnos.length ? "carril" : ""}`}>
           {turnos.length === 0 ? (
             <div className="flex-1">
-              <Vacio escena={escenaEnso} etiquetaEscena="Un ensō, el círculo zen de un trazo, dibujado con caracteres" titulo="Escribile algo al modelo">
+              <Vacio marco altoEscena={230} escena={escenaGlobo} etiquetaEscena="Un globo terráqueo que gira, con nodos de red, dibujado con caracteres" titulo="Escribile algo al modelo">
                 Pasá el mouse por un token de la respuesta para ver con qué probabilidad lo eligió.
               </Vacio>
             </div>

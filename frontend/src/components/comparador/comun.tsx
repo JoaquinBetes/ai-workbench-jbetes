@@ -1,12 +1,13 @@
 import { Play, Square } from "lucide-react";
 import type { ReactNode } from "react";
 import { Giro } from "../ascii/Texto";
+import { TINTA } from "../../lib/tintas";
 
-/** Serie categórica validada para fondo oscuro (dataviz): ai, shu, rokushō, kin (colores japoneses, apagados). */
+/** Serie categórica validada para fondo oscuro (dataviz): fósforo, azul, ámbar, magenta. */
 export const SERIES = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
-export const SERIES_HEX = ["#6b8ed0", "#cf6448", "#45a689", "#b98d3a"];
-/** Los mismos tokens de index.css en hex, para recharts y three.js (no leen variables CSS). */
-export const TINTA_HEX = { tinta: "#ece8dc", senal: "#c2583f", panel: "#0c0c0b" };
+export { SERIES_HEX } from "../../lib/tintas";
+/** Los mismos tokens de index.css en hex, para recharts (no lee variables CSS). */
+export const TINTA_HEX = { tinta: TINTA.tinta, senal: TINTA.senal, panel: TINTA.panel };
 
 /** Panel de configuración de un modo del comparador, con el botón de correr abajo. */
 export function PanelConfig({

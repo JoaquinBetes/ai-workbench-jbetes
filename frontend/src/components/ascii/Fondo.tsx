@@ -1,15 +1,17 @@
-import { escenaFondo } from "../../lib/ascii";
+import { useState } from "react";
+import { crearEscenaFondo } from "../../lib/ascii";
 import LienzoAscii from "./LienzoAscii";
 
 /**
- * Fondo vivo de la app: una niebla de caracteres casi invisible que deriva y
- * se aviva alrededor del puntero. Detrás de todo; se puede apagar desde la
- * barra de estado o la paleta de comandos.
+ * Fondo vivo de la app: una placa de circuito en ASCII, casi apagada, con
+ * señales que recorren las pistas. Cada token que genera el modelo dispara un
+ * pulso. Detrás de todo; se puede apagar desde la barra de estado o la paleta.
  */
 export default function Fondo({ apagado }: { apagado: boolean }) {
+  const [escena] = useState(crearEscenaFondo);
   return (
     <div className="pointer-events-none fixed inset-0 z-0" aria-hidden>
-      {!apagado && <LienzoAscii escena={escenaFondo} celda={16} fps={12} interactivo />}
+      {!apagado && <LienzoAscii escena={escena} celda={16} fps={15} interactivo />}
     </div>
   );
 }
