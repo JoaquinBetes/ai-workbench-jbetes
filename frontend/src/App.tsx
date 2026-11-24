@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import Fondo from "./components/ascii/Fondo";
 import Chat from "./components/Chat";
 import Comparador, { MODOS_COMPARADOR, type IdModo } from "./components/comparador/Comparador";
 import Playground from "./components/playground/Playground";
@@ -14,6 +15,23 @@ export default function App() {
   const [modoComparador, setModoComparador] = useState<IdModo>("lado-a-lado");
   const [paleta, setPaleta] = useState(false);
   const [atajos, setAtajos] = useState(false);
+  // El fondo animado se puede apagar; la preferencia queda en este navegador.
+  const [fondoApagado, setFondoApagado] = useState(() => {
+    try {
+      return localStorage.getItem("workbench:fondo") === "apagado";
+    } catch {
+      return false;
+    }
+  });
+  const alternarFondo = () =>
+    setFondoApagado((a) => {
+      try {
+        localStorage.setItem("workbench:fondo", a ? "vivo" : "apagado");
+      } catch {
+        /* sin almacenamiento: solo dura esta sesión */
+      }
+      return !a;
+    });
 
   const ir = (v: IdVista) => {
     setVista(v);
@@ -39,6 +57,13 @@ export default function App() {
       },
     })),
     { id: "atajos", titulo: "Ver los atajos de teclado", grupo: "Ayuda", atajo: ["?"], ejecutar: () => setAtajos(true) },
+    {
+      id: "fondo",
+      titulo: fondoApagado ? "Encender el fondo animado" : "Apagar el fondo animado",
+      grupo: "Apariencia",
+      claves: "ascii animación movimiento",
+      ejecutar: alternarFondo,
+    },
   ]);
 
   // Atajos globales. Las acciones de teclado nunca se animan: la vista cambia al instante.
@@ -94,28 +119,31 @@ export default function App() {
 
   return (
     <>
-      <div className="app-ground" aria-hidden />
-      <div className="relative z-10 flex h-full flex-col">
+      <a href="#contenido" className="salto">
+        Saltar al contenido
+      </a>
+      <Fondo apagado={fondoApagado} />
+      <div className="relative z-10 flex h-full flex-col max-lg:h-auto max-lg:min-h-full">
         <BarraSuperior vista={vista} onVista={ir} onPaleta={() => setPaleta(true)} />
-        <main className="relative min-h-0 flex-1">
+        <main id="contenido" tabIndex={-1} className="relative min-h-0 flex-1 outline-none max-lg:flex-none">
           {/* Las vistas quedan montadas: cambiar de vista no pierde la conversación. */}
           {visitadas.has("playground") && (
-            <div hidden={vista !== "playground"} className="h-full">
+            <div hidden={vista !== "playground"} className="h-full max-lg:h-auto">
               <Playground activa={vista === "playground"} />
             </div>
           )}
           {visitadas.has("comparador") && (
-            <div hidden={vista !== "comparador"} className="h-full">
+            <div hidden={vista !== "comparador"} className="h-full max-lg:h-auto">
               <Comparador activa={vista === "comparador"} modo={modoComparador} onModo={setModoComparador} />
             </div>
           )}
           {visitadas.has("chat") && (
-            <div hidden={vista !== "chat"} className="h-full">
+            <div hidden={vista !== "chat"} className="h-full max-lg:h-auto">
               <Chat activa={vista === "chat"} />
             </div>
           )}
         </main>
-        <BarraEstado onAtajos={() => setAtajos(true)} />
+        <BarraEstado onAtajos={() => setAtajos(true)} fondoApagado={fondoApagado} onFondo={alternarFondo} />
       </div>
       {paleta && <PaletaComandos onCerrar={() => setPaleta(false)} />}
       {atajos && <HojaAtajos onCerrar={() => setAtajos(false)} />}
