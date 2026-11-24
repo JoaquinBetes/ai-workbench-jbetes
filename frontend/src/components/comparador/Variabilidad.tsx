@@ -86,10 +86,10 @@ function Histograma3D({ corridas }: { corridas: Corrida[] }) {
   );
   const top = [...totales.entries()].sort((a, b) => b[1].n - a[1].n).slice(0, 6);
   const tono = (i: number) => {
-    // secuencial en washi: más clara la temperatura más alta
+    // secuencial en fósforo: más clara la temperatura más alta
     const k = corridas.length > 1 ? i / (corridas.length - 1) : 1;
     const f = 0.35 + k * 0.65;
-    const c = [0xec, 0xe8, 0xdc].map((v) => Math.round(5 + (v - 5) * f));
+    const c = [0x8a, 0xf7, 0xad].map((v) => Math.round(3 + (v - 3) * f));
     return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
   };
   return (
@@ -355,7 +355,7 @@ export default function Variabilidad({ activa = true }: { activa?: boolean }) {
                       </li>
                     ))}
                   </ol>
-                  <p className="hint border-t border-line px-4 py-2.5">En bermellón, la mayoritaria: la que elegiría la autoconsistencia.</p>
+                  <p className="hint border-t border-line px-4 py-2.5">Encendida, la mayoritaria: la que elegiría la autoconsistencia.</p>
                 </div>
 
                 <div className="panel rise-in flex flex-col">

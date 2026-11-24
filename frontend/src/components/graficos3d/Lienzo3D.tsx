@@ -6,10 +6,10 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CanvasTexture, Group, NearestFilter, OrthographicCamera, RepeatWrapping, Uniform } from "three";
 
 // Efecto de post-proceso propio: convierte la escena en caracteres según la
-// luminancia de cada celda, pero conserva el color de la celda (así el
-// bermellón de lo elegido sigue siendo bermellón). La rampa va de vacío a lleno.
-const RAMPA_3D = " .:-=+*ﾉﾒ#%@";
-const FUENTE = '"M PLUS 1 Code Variable", "M PLUS 1 Code", monospace';
+// luminancia de cada celda, pero conserva el color de la celda (así lo elegido
+// sigue encendido y la duda sigue en ámbar). La rampa va de vacío a lleno.
+const RAMPA_3D = " .:-=+*#%@";
+const FUENTE = '"IBM Plex Mono", monospace';
 
 const fragmento = /* glsl */ `
   uniform sampler2D uChars;
