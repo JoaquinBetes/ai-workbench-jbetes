@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { TINTAS, type Escena, type Tinta } from "../../lib/ascii";
+import { movimiento } from "../../lib/movimiento";
 
-const reducido = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // Fuente con la que se dibujan las escenas (la misma monoespaciada de la interfaz).
 const FUENTE = '"IBM Plex Mono", ui-monospace, monospace';
@@ -11,8 +11,8 @@ function leerColores(el: HTMLElement): Record<Tinta, string> {
   const v = (n: string, f: string) => css.getPropertyValue(n).trim() || f;
   return {
     ink: v("--ink", "#8af7ad"),
-    muted: v("--muted", "#55ad77"),
-    accent: v("--accent", "#3dff7f"),
+    muted: v("--muted", "#72c993"),
+    accent: v("--accent", "#5ff59a"),
     doubt: v("--doubt", "#ffb238"),
     silk: v("--silk", "#dce8d9"),
     pista: v("--pista", "#1d6a3b"),
@@ -98,6 +98,7 @@ export default function LienzoAscii({
     const halo = document.createElement("canvas");
     const hctx = halo.getContext("2d")!;
     const REDUCCION = 4;
+    let barrido: CanvasPattern | null = null;
 
     const glifo = (c: string) => {
       let i = indice.get(c);
@@ -138,6 +139,13 @@ export default function LienzoAscii({
       rows = Math.max(1, Math.floor(r.height / ch));
       cv.width = Math.round(r.width * dpr);
       cv.height = Math.round(r.height * dpr);
+      const fila = document.createElement("canvas");
+      fila.width = 1;
+      fila.height = Math.max(3, Math.round(3 * dpr));
+      const fctx = fila.getContext("2d")!;
+      fctx.fillStyle = "#000";
+      fctx.fillRect(0, 0, 1, Math.max(1, Math.round(dpr)));
+      barrido = ctx.createPattern(fila, "repeat");
       halo.width = Math.max(1, Math.ceil(cv.width / REDUCCION));
       halo.height = Math.max(1, Math.ceil(cv.height / REDUCCION));
       atlas.clear();
@@ -145,7 +153,14 @@ export default function LienzoAscii({
       colores = leerColores(cv);
     };
 
-    const t0 = performance.now();
+    // El reloj de la escena arranca a los 2,5 s (el primer cuadro ya tiene de
+    // todo) y no corre mientras el movimiento está en pausa: al reanudar, la
+    // escena sigue desde donde quedó.
+    const t0 = performance.now() - 2500;
+    let enPausa = 0;
+    let pausaDesde: number | null = null;
+    let quieto = false;
+    const reloj = (ahora: number) => ((pausaDesde ?? ahora) - t0 - enPausa) / 1000;
     let ultimo = 0;
     const dibujar = (ahora: number) => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -155,7 +170,7 @@ export default function LienzoAscii({
       const ox = Math.floor((cv.width / dpr - cols * cw) / 2);
       const oy = Math.floor((cv.height / dpr - rows * ch) / 2);
       escenaRef.current({
-        t: reducido() ? 2.5 : (ahora - t0) / 1000,
+        t: reloj(ahora),
         ahora,
         cols,
         rows,
@@ -185,6 +200,15 @@ export default function LienzoAscii({
         ctx.drawImage(halo, -cw * dpr, -ch * dpr * 0.5, cv.width + cw * dpr * 2, cv.height + ch * dpr);
         ctx.globalCompositeOperation = "source-over";
       }
+      // líneas de barrido: solo sobre el dibujo (destination-out le saca brillo
+      // a una fila de cada tres), nunca sobre el texto de la interfaz
+      if (barrido) {
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = barrido;
+        ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.globalCompositeOperation = "source-over";
+      }
       ctx.globalAlpha = 1;
     };
 
@@ -201,7 +225,20 @@ export default function LienzoAscii({
       if (!vivo) return;
       raf = requestAnimationFrame(bucle);
       confirmarVisible(ahora);
-      if (!visible || document.hidden || pausadoRef.current) return;
+      if (!visible || document.hidden) return;
+      if (!movimiento.activo() || pausadoRef.current) {
+        if (pausaDesde === null) pausaDesde = ahora;
+        if (!quieto) {
+          dibujar(ahora);
+          quieto = true;
+        }
+        return;
+      }
+      if (pausaDesde !== null) {
+        enPausa += ahora - pausaDesde;
+        pausaDesde = null;
+      }
+      quieto = false;
       if (ahora - ultimo < 1000 / fps) return;
       ultimo = ahora;
       dibujar(ahora);
@@ -209,8 +246,7 @@ export default function LienzoAscii({
 
     const arrancar = () => {
       medir();
-      if (reducido()) dibujar(performance.now());
-      else raf = requestAnimationFrame(bucle);
+      raf = requestAnimationFrame(bucle);
     };
 
     // Esperar a la fuente: si no, el atlas se arma con la de reemplazo.
@@ -218,7 +254,7 @@ export default function LienzoAscii({
 
     const ro = new ResizeObserver(() => {
       medir();
-      if (reducido()) dibujar(performance.now());
+      quieto = false; // en pausa, se vuelve a dibujar el cuadro con el tamaño nuevo
     });
     ro.observe(cv);
     const io = new IntersectionObserver(([e]) => (visible = e.isIntersecting));

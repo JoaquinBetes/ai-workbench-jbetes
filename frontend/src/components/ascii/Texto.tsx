@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
 import { CIFRA } from "../../lib/ascii";
+import { movimiento } from "../../lib/movimiento";
 
 const reducido = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/** Los efectos de texto se saltean si el movimiento está en pausa (o el sistema pide reducirlo). */
+const quieto = () => !movimiento.activo();
 const azar = () => CIFRA[Math.floor(Math.random() * CIFRA.length)];
 
 /**
@@ -9,10 +12,10 @@ const azar = () => CIFRA[Math.floor(Math.random() * CIFRA.length)];
  * asienta de izquierda a derecha. Una sola vez, al montarse (~450 ms).
  */
 export function Decodificar({ texto, duracion = 450, className = "" }: { texto: string; duracion?: number; className?: string }) {
-  const [vista, setVista] = useState(() => (reducido() ? texto : texto.replace(/\S/g, " ")));
+  const [vista, setVista] = useState(() => (quieto() ? texto : texto.replace(/\S/g, " ")));
 
   useEffect(() => {
-    if (reducido()) {
+    if (quieto()) {
       setVista(texto);
       return;
     }
@@ -34,7 +37,8 @@ export function Decodificar({ texto, duracion = 450, className = "" }: { texto: 
   }, [texto, duracion]);
 
   return (
-    <span className={className} aria-label={texto}>
+    <span className={className}>
+      <span className="sr-only">{texto}</span>
       <span aria-hidden>{vista}</span>
     </span>
   );
@@ -77,7 +81,8 @@ export function BarraTexto({
   return (
     <span className={`mono whitespace-pre text-label leading-none ${className}`} aria-hidden>
       <span className={color}>{"#".repeat(llenas)}</span>
-      <span className="text-faint">{"·".repeat(largo - llenas)}</span>
+      {/* lo vacío es un trazo punteado dibujado, no texto: no compite por contraste */}
+      <span className="pista-punteada inline-block align-middle" style={{ width: `${largo - llenas}ch` }} />
     </span>
   );
 }

@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from "react";
 import { CIFRA } from "../../lib/ascii";
 import type { TokenLogprob } from "../../lib/api";
 import { duda, pct, prob } from "../../lib/probs";
+import { movimiento } from "../../lib/movimiento";
 
 /**
  * "duda": subrayado ámbar cuya intensidad es la entropía normalizada del paso
@@ -11,7 +12,7 @@ import { duda, pct, prob } from "../../lib/probs";
  */
 export type ModoColor = "duda" | "probabilidad" | "ninguno";
 
-const reducido = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reducido = () => !movimiento.activo();
 const cifrar = (s: string) => s.replace(/\S/g, () => CIFRA[Math.floor(Math.random() * CIFRA.length)]);
 
 /** Un token recién llegado: tres cuadros de glifos al azar y después el texto real (~135 ms). */
