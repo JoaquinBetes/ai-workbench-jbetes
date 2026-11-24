@@ -1,58 +1,78 @@
 @import "tailwindcss";
 
 /*
-  Workbench 工房 — sistema visual "modo texto".
+  Workbench — sistema visual "fósforo".
 
-  Mundo: tinta sumi sobre papel washi, dibujado con caracteres. Arte ASCII y AA
-  japonés, pantallas de PC-98 (tramado ordenado), marcas de registro de imprenta.
-  Casi todo es blanco y negro; el color aparece diluido y solo donde significa algo.
+  Mundo: una consola de los 90 en verde fósforo, con arte ASCII animado, montada
+  sobre una placa de circuito: pistas, vías, chips y serigrafía. El negro manda,
+  el verde es la voz; ámbar y rojo aparecen solo cuando significan algo.
 
   Paleta: start.mjs brand (skill de taste) con los colores que pidió el cliente.
-  El bloque --p-* es el que imprimió, sin tocar, salvo la acción: el botón
-  principal es washi (blanco) y el bermellón queda para la señal.
+  El bloque --p-* es el que imprimió, sin tocar.
 */
 
-:root {
-  --p-bg: #050505; --p-surface: #0c0c0b; --p-ink: #ece8dc; --p-muted: #9a968a;
-  --p-accent: #c2583f; --p-accent-ink: #050505; --p-action: #c2583f; --p-action-ink: #050505;
-  --p-inv-bg: #ece8dc; --p-inv-surface: #d9d5ca; --p-inv-ink: #050505; --p-inv-muted: #504e4b;
+/* VT323 (la letra de la terminal DEC VT320) con un ajuste de tamaño: su altura de
+   x es muy chica, así que se agranda para que 13 px se lean como 13 px. */
+@font-face {
+  font-family: "Terminal";
+  font-style: normal; font-weight: 400; font-display: swap;
+  size-adjust: 128%;
+  src: url("../node_modules/@fontsource/vt323/files/vt323-latin-ext-400-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: "Terminal";
+  font-style: normal; font-weight: 400; font-display: swap;
+  size-adjust: 128%;
+  src: url("../node_modules/@fontsource/vt323/files/vt323-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
 
-  /* Letras: tres voces, cada una con un trabajo.
-     Zen Antique: títulos (tipografía impresa japonesa de época).
-     DotGothic16: lecturas y números (matriz de puntos).
-     M PLUS 1 Code: interfaz y texto del modelo (monoespaciada japonesa, el medio del arte ASCII). */
-  --font-display: "Zen Antique", "Hiragino Mincho ProN", serif;
-  --font-dot: "DotGothic16", "M PLUS 1 Code Variable", ui-monospace, monospace;
-  --font-text: "M PLUS 1 Code Variable", "M PLUS 1 Code", ui-monospace, "SFMono-Regular", Menlo, monospace;
+:root {
+  --p-bg: #030806; --p-surface: #07110b; --p-ink: #8af7ad; --p-muted: #55ad77;
+  --p-accent: #3dff7f; --p-accent-ink: #030806; --p-action: #3dff7f; --p-action-ink: #030806;
+  --p-inv-bg: #8af7ad; --p-inv-surface: #7fe39f; --p-inv-ink: #030806; --p-inv-muted: #2e563d;
+
+  /* Letras: dos voces.
+     Terminal (VT323): títulos, lecturas, números, designadores; la pantalla de fósforo.
+     IBM Plex Mono: interfaz y texto del modelo; se lee bien en párrafos largos. */
+  --font-display: "Terminal", "VT323", ui-monospace, monospace;
+  --font-dot: var(--font-display);
+  --font-text: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   --font-mono: var(--font-text);
 
   --bg: var(--p-bg);
   --surface: var(--p-surface);
-  --ink: var(--p-ink);
+  --ink: var(--p-ink);                /* fósforo suave: el texto */
   --muted: var(--p-muted);
-  --accent: var(--p-accent);          /* shu, bermellón de sello: la señal */
+  --accent: var(--p-accent);          /* fósforo encendido: la señal, la selección */
   --accent-ink: var(--p-accent-ink);
-  --action: var(--p-ink);             /* botón principal: washi */
-  --action-ink: var(--p-bg);
+  --action: var(--p-action);          /* botón principal: bloque de fósforo (video inverso) */
+  --action-ink: var(--p-action-ink);
 
-  --ink-2: color-mix(in oklab, var(--ink) 80%, var(--bg));
-  --ink-3: color-mix(in oklab, var(--ink) 55%, var(--bg));   /* marcas de registro, decoración */
-  --faint: color-mix(in oklab, var(--ink) 22%, var(--bg));   /* solo decoración, nunca texto */
-  --panel: color-mix(in oklab, var(--ink) 2.5%, var(--bg));
-  --raised: color-mix(in oklab, var(--ink) 7%, var(--bg));
-  --sunken: #000;
-  --line: color-mix(in oklab, var(--ink) 11%, transparent);
-  --line-2: color-mix(in oklab, var(--ink) 20%, transparent);
-  --accent-soft: color-mix(in oklab, var(--accent) 16%, transparent);
+  --ink-2: color-mix(in oklab, var(--ink) 82%, var(--bg));
+  --ink-3: color-mix(in oklab, var(--ink) 50%, var(--bg));   /* decoración */
+  --faint: color-mix(in oklab, var(--ink) 20%, var(--bg));   /* solo decoración, nunca texto */
+  --panel: #050d08;                   /* máscara de soldadura, casi negra */
+  --raised: #0a1a10;
+  --sunken: #010302;
+  --line: color-mix(in oklab, var(--ink) 15%, transparent);
+  --line-2: color-mix(in oklab, var(--ink) 28%, transparent);
+  --accent-soft: color-mix(in oklab, var(--accent) 14%, transparent);
   --accent-line: color-mix(in oklab, var(--accent) 55%, transparent);
 
-  /* Datos: duda en ocre (kincha). Serie categórica validada en oscuro (dataviz):
-     ai (índigo), shu (bermellón), rokushō (verdín), kin (ocre). */
-  --doubt: #b98d3a;
-  --danger: #cf6448;
-  --s1: #6b8ed0; --s2: #cf6448; --s3: #45a689; --s4: #b98d3a;
-  /* JSON resaltado: verdín y añil diluidos, para que el texto siga siendo casi blanco. */
-  --syn-texto: #9fbcae; --syn-numero: #9cb1dc;
+  /* Placa: serigrafía blanca para los designadores, cobre bajo la máscara para las pistas. */
+  --silk: #dce8d9;
+  --pista: #1d6a3b;
+
+  /* Estados: ámbar de fósforo para la duda, rojo de LED para el error. */
+  --doubt: #ffb238;
+  --danger: #ff5f52;
+  /* Serie categórica de gráficos, validada para fondo oscuro (dataviz):
+     fósforo, azul, ámbar, magenta. */
+  --s1: #2aa961; --s2: #3a93d0; --s3: #c4831c; --s4: #c75a8d;
+  /* JSON resaltado: cian y rosa apagados, para que el texto siga siendo verde. */
+  --syn-texto: #8ccfe6; --syn-numero: #e39ac0;
 
   --t-label: 13px; --t-small: 14px; --t-body: 15px; --t-lead: 18px;
 
@@ -66,8 +86,8 @@
   --bar-top: 52px;
   --bar-bottom: 30px;
 
-  /* Tramado ordenado (Bayer 2×2) como textura de PC-98: una imagen de 4×4 px. */
-  --dither: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%23ece8dc' d='M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0z'/%3E%3C/svg%3E");
+  /* Tramado ordenado (Bayer 2×2), como las imágenes de 1 bit: una imagen de 4×4 px. */
+  --dither: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' shape-rendering='crispEdges'%3E%3Cpath fill='%238af7ad' d='M0 0h1v1H0zM2 2h1v1H2zM2 0h1v1H2zM0 2h1v1H0z'/%3E%3C/svg%3E");
 
   color-scheme: dark;
 }
@@ -87,6 +107,7 @@
   --color-accent: var(--accent);
   --color-doubt: var(--doubt);
   --color-danger: var(--danger);
+  --color-silk: var(--silk);
   --font-sans: var(--font-text);
   --font-display: var(--font-display);
   --font-dot: var(--font-dot);
@@ -102,6 +123,7 @@
 
 @layer base {
   html, body, #root { height: 100%; }
+  main { counter-reset: designador; }
   body {
     margin: 0;
     background: var(--bg);
@@ -128,43 +150,38 @@
   .display { font-family: var(--font-display); font-weight: 400; letter-spacing: -.01em; }
 
   /* ------------------------------------------------------------ paneles
-     Superficie apenas sobre el negro, línea de 1 px y marcas de registro en las
-     cuatro esquinas (como en un pliego de imprenta). Esquinas rectas. */
+     Cada panel es una pieza sobre la placa: máscara de soldadura casi negra,
+     borde de 1 px y una vía (agujero metalizado) en cada esquina. */
   .panel {
     position: relative;
     background: var(--panel);
     border: 1px solid var(--line);
   }
   .panel::after {
-    content: ""; position: absolute; inset: -1px; pointer-events: none; z-index: 1;
-    --c: var(--ink-3); --l: 9px;
-    background:
-      linear-gradient(var(--c), var(--c)) top left / var(--l) 1px no-repeat,
-      linear-gradient(var(--c), var(--c)) top left / 1px var(--l) no-repeat,
-      linear-gradient(var(--c), var(--c)) top right / var(--l) 1px no-repeat,
-      linear-gradient(var(--c), var(--c)) top right / 1px var(--l) no-repeat,
-      linear-gradient(var(--c), var(--c)) bottom left / var(--l) 1px no-repeat,
-      linear-gradient(var(--c), var(--c)) bottom left / 1px var(--l) no-repeat,
-      linear-gradient(var(--c), var(--c)) bottom right / var(--l) 1px no-repeat,
-      linear-gradient(var(--c), var(--c)) bottom right / 1px var(--l) no-repeat;
+    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    --via: radial-gradient(circle, transparent 1.6px, var(--ink-3) 1.7px 3px, transparent 3.1px);
+    background: var(--via) top left / 14px 14px no-repeat, var(--via) top right / 14px 14px no-repeat,
+                var(--via) bottom left / 14px 14px no-repeat, var(--via) bottom right / 14px 14px no-repeat;
+    opacity: .55;
   }
   .panel-head {
     display: flex; align-items: center; gap: var(--s-2);
     min-height: 42px; padding: 0 var(--s-4);
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px dashed var(--line-2);
   }
-  .panel-title { font: 400 var(--t-label)/1.2 var(--font-dot); color: var(--ink); letter-spacing: .04em; }
-  .panel-title::before { content: "■ "; color: var(--accent); }
+  /* Títulos con designador de serigrafía, numerados solos en cada vista: U1, U2… */
+  .panel-title { font: 400 var(--t-label)/1.2 var(--font-dot); color: var(--ink); letter-spacing: .06em; text-transform: uppercase; counter-increment: designador; }
+  .panel-title::before { content: "U" counter(designador); display: inline-block; min-width: 2.6em; margin-right: .4em; color: var(--silk); opacity: .75; }
   .panel-meta { font: 400 var(--t-label)/1.2 var(--font-dot); color: var(--muted); letter-spacing: .02em; }
   .well { background: var(--sunken); border: 1px solid var(--line); }
-  .label { font: 400 var(--t-label)/1.3 var(--font-dot); color: var(--muted); letter-spacing: .03em; }
+  .label { font: 400 var(--t-label)/1.3 var(--font-dot); color: var(--muted); letter-spacing: .04em; }
   .hint { font: 400 var(--t-small)/1.6 var(--font-text); color: var(--muted); text-wrap: pretty; }
-  .rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+  .rule { height: 0; border: 0; border-top: 1px dashed var(--line-2); margin: 0; }
   .dither { background-image: var(--dither); background-size: 4px 4px; opacity: .14; }
 
   /* ------------------------------------------------------------ botones
-     Principal: bloque washi, letras negras. Secundario: marco con marcas de
-     registro que se abren al pasar el mouse. Al presionar, se hunde (.97). */
+     Principal: bloque de fósforo con letras negras (video inverso). Secundario:
+     marco con esquinas de mira que se abren al pasar el mouse. Al presionar, se hunde (.97). */
   .btn {
     --h: 34px; --c: var(--ink-3); --l: 6px;
     position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -199,7 +216,7 @@
   @media (hover: hover) and (pointer: fine) {
     .btn:not(:disabled):hover { transition-duration: var(--m-in); --c: var(--ink); border-color: var(--line-2); }
     .btn:not(:disabled):hover::before { transform: scale(1.06, 1.18); transition-duration: var(--m-in); }
-    .btn--primary:not(:disabled):hover { background: color-mix(in oklab, var(--action) 88%, var(--accent)); }
+    .btn--primary:not(:disabled):hover { background: color-mix(in oklab, var(--action) 82%, white); }
     .btn--danger:not(:disabled):hover { background: color-mix(in oklab, var(--danger) 10%, transparent); --c: var(--danger); }
     .btn--quiet:not(:disabled):hover { color: var(--ink); }
   }
@@ -235,7 +252,7 @@
   .switch:active::before { transform: scaleX(1.4); }
   .switch[aria-checked="true"]:active::before { transform: translateX(16px) scaleX(1.4); transform-origin: right center; }
 
-  /* ------------------------------------------------------------ deslizador: pista punteada, tramo lleno en washi */
+  /* ------------------------------------------------------------ deslizador: pista punteada, tramo lleno en fósforo */
   .range { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; margin: 0; cursor: pointer; }
   .range::-webkit-slider-runnable-track {
     height: 4px;
@@ -257,7 +274,7 @@
   .range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--ink); }
 
   /* ------------------------------------------------------------ control segmentado
-     El elegido se invierte (washi con letras negras), como una selección en pantalla de texto.
+     El elegido se invierte (fósforo con letras negras), como una selección en pantalla de texto.
      El bloque se desliza solo cuando el cambio lo hizo el puntero. */
   .seg {
     position: relative; display: inline-flex; padding: 2px; gap: 2px; isolation: isolate; max-width: 100%;
@@ -281,7 +298,8 @@
   .seg--sm .seg__opt { height: 24px; padding: 0 10px; }
   .seg--sm .seg__ind { height: 24px; }
   .seg--block { display: flex; }
-  .seg--block .seg__opt { flex: 1; justify-content: center; padding: 0 6px; }
+  .seg--block .seg__opt { flex: 1; justify-content: center; padding: 0 5px; }
+  .seg--block.seg--sm .seg__opt { font-size: 12px; letter-spacing: 0; padding: 0 4px; }
 
   /* ------------------------------------------------------------ piezas chicas */
   .kbd {
@@ -312,7 +330,7 @@
   .tag--doubt { color: var(--doubt); }
   .tag--danger { color: var(--danger); }
 
-  /* señal de vida: cuadradito bermellón con un anillo que crece y se apaga (2,4 s) */
+  /* señal de vida: un LED con un anillo que crece y se apaga (2,4 s) */
   .live { position: relative; display: inline-block; width: 6px; height: 6px; background: var(--accent); flex: none; }
   .live::after {
     content: ""; position: absolute; inset: 0; border: 1px solid var(--accent);
@@ -324,7 +342,7 @@
   .live--off::after, .live--idle::after { display: none; }
   @keyframes live-ring { 0% { transform: scale(1); opacity: .9; } 70%, 100% { transform: scale(3); opacity: 0; } }
 
-  .caret { display: inline-block; width: .6em; height: 1.1em; margin-left: 1px; vertical-align: -3px; background: var(--ink); animation: caret 1s steps(1) infinite; }
+  .caret { display: inline-block; width: .5em; height: .9em; margin-left: .12em; vertical-align: -.08em; background: var(--accent); animation: caret 1.06s steps(1) infinite; }
   @keyframes caret { 50% { opacity: 0; } }
 
   /* ------------------------------------------------------------ tooltips (400 ms; después, sin demora) */
@@ -333,7 +351,7 @@
     content: attr(data-tip); position: absolute; z-index: 60; left: 50%; top: calc(100% + 8px);
     transform: translate(-50%, -2px); opacity: 0; pointer-events: none;
     padding: 5px 8px; background: var(--ink); color: var(--bg);
-    font: 400 var(--t-label)/1.3 var(--font-text); white-space: nowrap;
+    font: 400 var(--t-label)/1.3 var(--font-text); width: max-content; max-width: min(280px, 70vw); white-space: normal;
     transition: opacity 125ms var(--ease), transform 125ms var(--ease); transition-delay: 0ms;
   }
   [data-tip-pos="top"]::after { top: auto; bottom: calc(100% + 8px); transform: translate(-50%, 2px); }
@@ -398,6 +416,8 @@
   .react-flow { --xy-background-color: transparent; }
   .react-flow__attribution { display: none; }
   .react-flow__node { font-family: var(--font-text); }
+  /* carril de lectura: la conversación tapa la placa del fondo para leerse sin ruido */
+  .carril { background: color-mix(in oklab, var(--bg) 92%, transparent); border-inline: 1px dashed var(--line); }
   .salto { position: absolute; left: 12px; top: -48px; z-index: 90; padding: 8px 12px; background: var(--ink); color: var(--bg); font: 400 var(--t-label)/1 var(--font-text); }
   .salto:focus { top: 8px; }
 }
@@ -420,6 +440,9 @@
 .sin-barra::-webkit-scrollbar { display: none; }
 
 /* En pantallas táctiles, todo lo que se toca mide 44 px (o tiene un área de toque de 44 px). */
+/* Sin mouse no hay tooltips (y así no ensanchan la página). */
+@media (hover: none) { [data-tip]::after { display: none; } }
+
 @media (pointer: coarse) {
   .btn { --h: 44px; }
   .seg__opt, .seg--sm .seg__opt { height: 40px; }
@@ -439,3 +462,12 @@
 }
 
 @keyframes escaner { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
+
+/* Pantalla de fósforo: líneas de barrido y una viñeta suave, quietas, encima de todo.
+   No se animan (nada de parpadeo) y no tapan clics. */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 95; pointer-events: none;
+  background:
+    repeating-linear-gradient(to bottom, rgb(0 0 0 / .14) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at center, transparent 62%, rgb(0 0 0 / .32) 100%);
+}
