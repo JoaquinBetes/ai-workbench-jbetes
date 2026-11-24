@@ -34,6 +34,16 @@ const REGLAS = [
     patron: /[\u3040-\u30ff\u3400-\u9fff\uff66-\uff9f]/,
   },
   {
+    nombre: "texto-ilegible",
+    regla: "DESIGN.md › Color: --faint e --ink-3 son decoración; el texto usa --ink, --ink-2 o --muted (contraste APCA)",
+    patron: /\btext-(faint|ink-3)\b/,
+  },
+  {
+    nombre: "tag-con-tooltip",
+    regla: "DESIGN.md › Interacción: un .tag no lleva data-tip (los dos usan ::after); el tooltip va en un envoltorio",
+    patron: /className="tag[^"]*"[^>]*data-tip|data-tip[^>]*className="tag/,
+  },
+  {
     nombre: "sin-tema-claro",
     regla: "DESIGN.md › Color: solo modo oscuro",
     patron: /prefers-color-scheme:\s*light|data-theme=["']light/,
