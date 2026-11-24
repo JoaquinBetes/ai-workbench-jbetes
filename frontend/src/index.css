@@ -9,6 +9,14 @@
 
   Paleta: start.mjs brand (skill de taste) con los colores que pidió el cliente.
   El bloque --p-* es el que imprimió, sin tocar.
+
+  Contraste (medido con WCAG 2 y con APCA, contra --panel):
+    --ink       15:1 · Lc -88   texto de lectura (APCA pide Lc 75 a 90; más de 90 encandila en oscuro)
+    --ink-2     12:1 · Lc -75   texto secundario
+    --muted     10:1 · Lc -64   etiquetas y ayudas (nunca párrafos largos)
+    --borde-campo 3,6:1         borde de campos y controles (WCAG 1.4.11 pide 3:1)
+  El fósforo encendido (--accent) es un poco menos saturado que el neón puro:
+  en fondo oscuro, los colores muy saturados "vibran" (Material Design).
 */
 
 /* VT323 (la letra de la terminal DEC VT320) con un ajuste de tamaño: su altura de
@@ -29,17 +37,20 @@
 }
 
 :root {
-  --p-bg: #030806; --p-surface: #07110b; --p-ink: #8af7ad; --p-muted: #55ad77;
-  --p-accent: #3dff7f; --p-accent-ink: #030806; --p-action: #3dff7f; --p-action-ink: #030806;
+  --p-bg: #030806; --p-surface: #07110b; --p-ink: #8af7ad; --p-muted: #72c993;
+  --p-accent: #5ff59a; --p-accent-ink: #030806; --p-action: #5ff59a; --p-action-ink: #030806;
   --p-inv-bg: #8af7ad; --p-inv-surface: #7fe39f; --p-inv-ink: #030806; --p-inv-muted: #2e563d;
 
-  /* Letras: dos voces.
-     Terminal (VT323): títulos, lecturas, números, designadores; la pantalla de fósforo.
-     IBM Plex Mono: interfaz y texto del modelo; se lee bien en párrafos largos. */
+  /* Letras: tres voces de una misma familia de ideas.
+     Terminal (VT323): solo títulos y lecturas grandes; a tamaño chico se desdibuja.
+     IBM Plex Mono: la interfaz (etiquetas, botones, números tabulares, código).
+     IBM Plex Sans: la prosa (lo que escribe el modelo, mensajes, ayudas). La
+     monoespaciada se lee más lento en párrafos; la proporcional, no. */
   --font-display: "Terminal", "VT323", ui-monospace, monospace;
-  --font-dot: var(--font-display);
   --font-text: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-dot: var(--font-text);
   --font-mono: var(--font-text);
+  --font-prose: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 
   --bg: var(--p-bg);
   --surface: var(--p-surface);
@@ -50,14 +61,15 @@
   --action: var(--p-action);          /* botón principal: bloque de fósforo (video inverso) */
   --action-ink: var(--p-action-ink);
 
-  --ink-2: color-mix(in oklab, var(--ink) 82%, var(--bg));
+  --ink-2: #7cdf9c;
   --ink-3: color-mix(in oklab, var(--ink) 50%, var(--bg));   /* decoración */
   --faint: color-mix(in oklab, var(--ink) 20%, var(--bg));   /* solo decoración, nunca texto */
   --panel: #050d08;                   /* máscara de soldadura, casi negra */
   --raised: #0a1a10;
   --sunken: #010302;
-  --line: color-mix(in oklab, var(--ink) 15%, transparent);
-  --line-2: color-mix(in oklab, var(--ink) 28%, transparent);
+  --line: color-mix(in oklab, var(--ink) 14%, transparent);   /* separadores, bordes de panel */
+  --line-2: color-mix(in oklab, var(--ink) 24%, transparent);
+  --borde-campo: #407451;                                       /* campos y controles: 3,6:1 */
   --accent-soft: color-mix(in oklab, var(--accent) 14%, transparent);
   --accent-line: color-mix(in oklab, var(--accent) 55%, transparent);
 
@@ -67,7 +79,7 @@
 
   /* Estados: ámbar de fósforo para la duda, rojo de LED para el error. */
   --doubt: #ffb238;
-  --danger: #ff5f52;
+  --danger: #ff8a7e;
   /* Serie categórica de gráficos, validada para fondo oscuro (dataviz):
      fósforo, azul, ámbar, magenta. */
   --s1: #2aa961; --s2: #3a93d0; --s3: #c4831c; --s4: #c75a8d;
@@ -108,6 +120,8 @@
   --color-doubt: var(--doubt);
   --color-danger: var(--danger);
   --color-silk: var(--silk);
+  --color-borde-campo: var(--borde-campo);
+  --font-prose: var(--font-prose);
   --font-sans: var(--font-text);
   --font-display: var(--font-display);
   --font-dot: var(--font-dot);
@@ -129,12 +143,16 @@
     background: var(--bg);
     color: var(--ink);
     font: 400 var(--t-small)/1.55 var(--font-text);
-    -webkit-font-smoothing: antialiased;
+    -webkit-font-smoothing: antialiased;   /* texto claro sobre oscuro: sin engrosar */
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "zero" 0;
     overflow: hidden;
   }
   @media (max-width: 1023px) { body { overflow: auto; } }
   ::selection { background: var(--ink); color: var(--bg); }
-  :focus-visible { outline: 1px solid var(--ink); outline-offset: 3px; }
+  /* Foco de teclado: 2 px de fósforo encendido, separado del borde (WCAG 2.4.13). */
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   button { cursor: pointer; font: inherit; color: inherit; }
   button:disabled { cursor: not-allowed; }
   input, textarea { caret-color: var(--accent); }
@@ -144,46 +162,46 @@
 }
 
 @layer components {
-  .num { font-family: var(--font-dot); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+  .num { font-family: var(--font-text); font-variant-numeric: tabular-nums slashed-zero; }
   .mono { font-family: var(--font-text); }
-  .dot { font-family: var(--font-dot); letter-spacing: .02em; }
-  .display { font-family: var(--font-display); font-weight: 400; letter-spacing: -.01em; }
+  .dot { font-family: var(--font-text); }
+  .display { font-family: var(--font-display); font-weight: 400; letter-spacing: 0; }
+  /* lectura grande (un número que se mira de un vistazo): letra de terminal */
+  .lectura { font-family: var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+  .prosa { font-family: var(--font-prose); }
 
   /* ------------------------------------------------------------ paneles
-     Cada panel es una pieza sobre la placa: máscara de soldadura casi negra,
-     borde de 1 px y una vía (agujero metalizado) en cada esquina. */
+     Cada panel es una pieza sobre la placa: máscara de soldadura casi negra y
+     borde de 1 px. El designador de serigrafía (U1, U2…) va en el título. */
   .panel {
     position: relative;
     background: var(--panel);
     border: 1px solid var(--line);
   }
-  .panel::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
-    --via: radial-gradient(circle, transparent 1.6px, var(--ink-3) 1.7px 3px, transparent 3.1px);
-    background: var(--via) top left / 14px 14px no-repeat, var(--via) top right / 14px 14px no-repeat,
-                var(--via) bottom left / 14px 14px no-repeat, var(--via) bottom right / 14px 14px no-repeat;
-    opacity: .55;
-  }
   .panel-head {
     display: flex; align-items: center; gap: var(--s-2);
-    min-height: 42px; padding: 0 var(--s-4);
-    border-bottom: 1px dashed var(--line-2);
+    min-height: 44px; padding: 0 var(--s-4);
+    border-bottom: 1px solid var(--line);
   }
-  /* Títulos con designador de serigrafía, numerados solos en cada vista: U1, U2… */
-  .panel-title { font: 400 var(--t-label)/1.2 var(--font-dot); color: var(--ink); letter-spacing: .06em; text-transform: uppercase; counter-increment: designador; }
-  .panel-title::before { content: "U" counter(designador); display: inline-block; min-width: 2.6em; margin-right: .4em; color: var(--silk); opacity: .75; }
-  .panel-meta { font: 400 var(--t-label)/1.2 var(--font-dot); color: var(--muted); letter-spacing: .02em; }
+  /* Títulos de panel: versalitas de interfaz con su designador, numerado solo por vista.
+     El designador es decorativo: "/ ''" lo oculta a los lectores de pantalla. */
+  .panel-title {
+    font: 500 12px/1.2 var(--font-text); color: var(--ink); letter-spacing: .08em; text-transform: uppercase;
+    counter-increment: designador;
+  }
+  .panel-title::before { content: "U" counter(designador) / ""; display: inline-block; min-width: 2.75em; color: var(--silk); opacity: .5; font-weight: 400; }
+  .panel-meta { font: 400 12px/1.2 var(--font-text); color: var(--muted); }
   .well { background: var(--sunken); border: 1px solid var(--line); }
-  .label { font: 400 var(--t-label)/1.3 var(--font-dot); color: var(--muted); letter-spacing: .04em; }
-  .hint { font: 400 var(--t-small)/1.6 var(--font-text); color: var(--muted); text-wrap: pretty; }
-  .rule { height: 0; border: 0; border-top: 1px dashed var(--line-2); margin: 0; }
+  .label { font: 400 var(--t-label)/1.35 var(--font-text); color: var(--muted); }
+  .hint { font: 400 var(--t-small)/1.6 var(--font-prose); color: var(--muted); text-wrap: pretty; }
+  .rule { height: 1px; border: 0; background: var(--line); margin: 0; }
   .dither { background-image: var(--dither); background-size: 4px 4px; opacity: .14; }
 
   /* ------------------------------------------------------------ botones
      Principal: bloque de fósforo con letras negras (video inverso). Secundario:
      marco con esquinas de mira que se abren al pasar el mouse. Al presionar, se hunde (.97). */
   .btn {
-    --h: 34px; --c: var(--ink-3); --l: 6px;
+    --h: 34px; --c: transparent; --l: 6px;
     position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     height: var(--h); padding: 0 14px; border-radius: 0;
     font: 400 var(--t-label)/1 var(--font-text); letter-spacing: .02em; white-space: nowrap; user-select: none;
@@ -212,11 +230,11 @@
   .btn--quiet::before { display: none; }
   .btn--sm { --h: 28px; padding: 0 10px; }
   .btn--icon { width: var(--h); padding: 0; }
-  .btn:disabled { opacity: .4; }
+  .btn:disabled { opacity: .45; }
   @media (hover: hover) and (pointer: fine) {
-    .btn:not(:disabled):hover { transition-duration: var(--m-in); --c: var(--ink); border-color: var(--line-2); }
+    .btn:not(:disabled):hover { transition-duration: var(--m-in); --c: var(--ink-2); border-color: var(--borde-campo); }
     .btn:not(:disabled):hover::before { transform: scale(1.06, 1.18); transition-duration: var(--m-in); }
-    .btn--primary:not(:disabled):hover { background: color-mix(in oklab, var(--action) 82%, white); }
+    .btn--primary:not(:disabled):hover { background: color-mix(in oklab, var(--action) 86%, white); }
     .btn--danger:not(:disabled):hover { background: color-mix(in oklab, var(--danger) 10%, transparent); --c: var(--danger); }
     .btn--quiet:not(:disabled):hover { color: var(--ink); }
   }
@@ -226,12 +244,13 @@
   .field {
     width: 100%; min-height: 34px; padding: 7px 10px;
     background: var(--sunken); color: var(--ink);
-    border: 1px solid var(--line-2); border-radius: 0;
+    border: 1px solid var(--borde-campo); border-radius: 0;
     font: 400 var(--t-small)/1.5 var(--font-text);
-    transition: border-color 140ms var(--ease), box-shadow 140ms var(--ease);
+    transition: border-color 120ms var(--ease), box-shadow 120ms var(--ease);
   }
   .field::placeholder { color: var(--muted); }
-  .field:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ink) 10%, transparent); }
+  /* foco de campo: el borde se vuelve doble y encendido; sin halo */
+  .field:focus { outline: none; border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
   .field--mono { font-size: var(--t-label); }
   .field[aria-invalid="true"] { border-color: var(--danger); }
   textarea.field { resize: vertical; }
@@ -239,7 +258,7 @@
   /* ------------------------------------------------------------ interruptor: [■  ] → [  ■] */
   .switch {
     position: relative; flex: none; width: 34px; height: 18px; padding: 0;
-    background: var(--sunken); border: 1px solid var(--line-2);
+    background: var(--sunken); border: 1px solid var(--borde-campo);
     transition: border-color 180ms var(--ease);
   }
   .switch::before {
@@ -258,9 +277,9 @@
     height: 4px;
     background:
       linear-gradient(90deg, var(--ink) 0 var(--pct, 50%), transparent var(--pct, 50%) 100%),
-      repeating-linear-gradient(90deg, var(--line-2) 0 2px, transparent 2px 4px);
+      repeating-linear-gradient(90deg, var(--borde-campo) 0 2px, transparent 2px 4px);
   }
-  .range::-moz-range-track { height: 4px; background: repeating-linear-gradient(90deg, var(--line-2) 0 2px, transparent 2px 4px); }
+  .range::-moz-range-track { height: 4px; background: repeating-linear-gradient(90deg, var(--borde-campo) 0 2px, transparent 2px 4px); }
   .range::-moz-range-progress { height: 4px; background: var(--ink); }
   .range::-webkit-slider-thumb {
     -webkit-appearance: none; width: 8px; height: 16px; margin-top: -6px; border-radius: 0;
@@ -270,8 +289,8 @@
   .range::-moz-range-thumb { width: 8px; height: 16px; border-radius: 0; background: var(--ink); border: 0; box-shadow: 0 0 0 2px var(--bg); }
   .range:active::-webkit-slider-thumb { transform: scaleY(1.2); background: var(--accent); transition-duration: var(--m-press); }
   .range:focus { outline: none; }
-  .range:focus-visible { outline: 1px solid var(--ink); outline-offset: 4px; }
-  .range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--ink); }
+  .range:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .range:focus-visible::-webkit-slider-thumb { background: var(--accent); }
 
   /* ------------------------------------------------------------ control segmentado
      El elegido se invierte (fósforo con letras negras), como una selección en pantalla de texto.
@@ -305,26 +324,26 @@
   .kbd {
     display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; vertical-align: middle;
     border: 1px solid var(--line-2); background: var(--sunken);
-    font: 400 var(--t-label)/1 var(--font-dot); color: var(--ink-2);
+    font: 400 12px/1 var(--font-text); color: var(--ink-2);
   }
   .chip {
     display: inline-flex; align-items: center; gap: 7px; min-height: 26px; padding: 0 10px;
-    border: 1px dashed var(--line-2); background: transparent;
-    font: 400 var(--t-label)/1.2 var(--font-text); color: var(--muted); white-space: nowrap;
+    border: 1px solid var(--line-2); background: transparent;
+    font: 400 var(--t-label)/1.2 var(--font-text); color: var(--ink-2); white-space: nowrap;
     transition: color var(--m-out) var(--ease), border-color var(--m-out) var(--ease), transform var(--m-out) var(--ease);
   }
   .chip[aria-pressed="true"] { color: var(--ink); border-style: solid; border-color: var(--ink); }
   @media (hover: hover) and (pointer: fine) {
-    button.chip:hover { color: var(--ink); border-color: var(--ink-3); transition-duration: var(--m-in); }
+    button.chip:hover { color: var(--ink); border-color: var(--borde-campo); background: var(--raised); transition-duration: var(--m-in); }
   }
   button.chip:active { transform: scale(.97); transition-duration: var(--m-press); }
   /* etiqueta entre corchetes: [ 94 tok/s ] */
   .tag {
     display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 2px; white-space: nowrap;
-    font: 400 var(--t-label)/1 var(--font-dot); color: var(--muted); letter-spacing: .02em;
+    font: 400 12px/1 var(--font-text); color: var(--muted);
   }
-  .tag::before { content: "["; color: var(--ink-3); margin-right: 2px; }
-  .tag::after { content: "]"; color: var(--ink-3); margin-left: 2px; }
+  .tag::before { content: "[" / ""; color: var(--ink-3); margin-right: 2px; }
+  .tag::after { content: "]" / ""; color: var(--ink-3); margin-left: 2px; }
   .tag--accent { color: var(--accent); }
   .tag--ink { color: var(--ink); }
   .tag--doubt { color: var(--doubt); }
@@ -342,7 +361,7 @@
   .live--off::after, .live--idle::after { display: none; }
   @keyframes live-ring { 0% { transform: scale(1); opacity: .9; } 70%, 100% { transform: scale(3); opacity: 0; } }
 
-  .caret { display: inline-block; width: .5em; height: .9em; margin-left: .12em; vertical-align: -.08em; background: var(--accent); animation: caret 1.06s steps(1) infinite; }
+  .caret { display: inline-block; width: .5em; height: .9em; margin-left: .12em; vertical-align: -.08em; background: var(--accent); animation: caret 1.06s steps(1) 4; }
   @keyframes caret { 50% { opacity: 0; } }
 
   /* ------------------------------------------------------------ tooltips (400 ms; después, sin demora) */
@@ -363,7 +382,9 @@
   }
 
   /* ------------------------------------------------------------ tokens del modelo */
-  .tokens { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 var(--t-body)/1.8 var(--font-text); color: var(--ink-2); }
+  /* Lo que escribe el modelo es lectura: proporcional, 16 px, 1,7 de interlínea y
+     un largo de línea de 50 a 75 caracteres (Baymard). */
+  .tokens { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 16px/1.7 var(--font-prose); color: var(--ink); max-width: 68ch; }
   .tok {
     cursor: pointer;
     text-decoration-line: underline; text-decoration-style: dotted; text-decoration-thickness: 2px; text-underline-offset: 5px;
@@ -383,7 +404,9 @@
   .tok--cifrado { color: var(--ink-3); }
 
   /* ------------------------------------------------------------ entrada de la app (una vez) */
-  .enter { animation: enter 480ms var(--ease-enter) both; animation-delay: var(--delay, 0ms); }
+  .enter { animation: enter 380ms var(--ease-enter) both; animation-delay: var(--delay, 0ms); }
+  /* una vista que ya se mostró no repite sus entradas al volver */
+  .quieta .enter, .quieta .fade-in { animation: none; }
   @keyframes enter { from { opacity: 0; clip-path: inset(0 0 100% 0); } to { opacity: 1; clip-path: inset(0 0 0 0); } }
   .fade-in { animation: fade-in var(--m-panel) var(--ease) both; }
   @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -417,7 +440,13 @@
   .react-flow__attribution { display: none; }
   .react-flow__node { font-family: var(--font-text); }
   /* carril de lectura: la conversación tapa la placa del fondo para leerse sin ruido */
-  .carril { background: color-mix(in oklab, var(--bg) 92%, transparent); border-inline: 1px dashed var(--line); }
+  .carril { background: color-mix(in oklab, var(--bg) 94%, transparent); border-inline: 1px solid var(--line); }
+  .fondo-placa {
+    -webkit-mask-image: radial-gradient(ellipse 62% 58% at 50% 52%, rgb(0 0 0 / .22), #000 100%);
+    mask-image: radial-gradient(ellipse 62% 58% at 50% 52%, rgb(0 0 0 / .22), #000 100%);
+  }
+  .pista-punteada { height: 1em; background: radial-gradient(circle, var(--ink-3) .9px, transparent 1.3px) 0 55% / 1ch 4px repeat-x; }
+  .carril-suave { background: color-mix(in oklab, var(--bg) 88%, transparent); }
   .salto { position: absolute; left: 12px; top: -48px; z-index: 90; padding: 8px 12px; background: var(--ink); color: var(--bg); font: 400 var(--t-label)/1 var(--font-text); }
   .salto:focus { top: 8px; }
 }
@@ -433,9 +462,12 @@
 /* En los teléfonos más angostos la navegación pierde los íconos para que entren las tres vistas. */
 @media (max-width: 359px) { header .seg__opt svg { display: none; } }
 
-/* El campo del compositor: sin glow; el foco es un filo de tinta dentro del panel. */
+/* El campo del compositor no dibuja su propio foco: lo muestra el panel entero,
+   con el borde en fósforo encendido (sin halo). */
 .campo-compositor { outline: none; }
-.campo-compositor:focus-visible { outline: 1px solid var(--ink-3); outline-offset: -1px; }
+.campo-compositor:focus-visible { outline: none; }
+.compositor { transition: border-color 120ms var(--ease); }
+.compositor:has(.campo-compositor:focus-visible) { border-color: var(--accent); }
 .sin-barra { scrollbar-width: none; }
 .sin-barra::-webkit-scrollbar { display: none; }
 
@@ -444,11 +476,12 @@
 @media (hover: none) { [data-tip]::after { display: none; } }
 
 @media (pointer: coarse) {
+  .solo-teclado { display: none; }
   .btn { --h: 44px; }
-  .seg__opt, .seg--sm .seg__opt { height: 40px; }
-  .seg__ind, .seg--sm .seg__ind { height: 40px; }
+  .seg__opt, .seg--sm .seg__opt { height: 44px; }
+  .seg__ind, .seg--sm .seg__ind { height: 44px; }
   .chip { min-height: 44px; }
-  .field { min-height: 44px; }
+  .field { min-height: 44px; font-size: 16px; }   /* 16 px: iOS no hace zoom al enfocar */
   .range { height: 44px; }
   .switch::after { content: ""; position: absolute; inset: -14px -6px; }
   footer button { min-height: 44px; }
@@ -463,11 +496,8 @@
 
 @keyframes escaner { from { transform: translateX(-100%); } to { transform: translateX(300%); } }
 
-/* Pantalla de fósforo: líneas de barrido y una viñeta suave, quietas, encima de todo.
-   No se animan (nada de parpadeo) y no tapan clics. */
-body::after {
-  content: ""; position: fixed; inset: 0; z-index: 95; pointer-events: none;
-  background:
-    repeating-linear-gradient(to bottom, rgb(0 0 0 / .14) 0 1px, transparent 1px 3px),
-    radial-gradient(ellipse at center, transparent 62%, rgb(0 0 0 / .32) 100%);
-}
+/* Movimiento en pausa (botón de la barra de estado, o reducir movimiento del
+   sistema): lo que se repite deja de moverse. Ver lib/movimiento.ts. */
+html[data-movimiento="pausa"] .live::after,
+html[data-movimiento="pausa"] .caret { animation: none; }
+html[data-movimiento="pausa"] .live::after { display: none; }

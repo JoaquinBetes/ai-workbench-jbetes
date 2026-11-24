@@ -5,8 +5,8 @@ export const TINTA = {
   fondo: "#030806",
   panel: "#050d08",
   tinta: "#8af7ad", // fósforo suave: el texto
-  apagada: "#55ad77",
-  senal: "#3dff7f", // fósforo encendido: lo elegido
+  apagada: "#72c993",
+  senal: "#5ff59a", // fósforo encendido: lo elegido
   duda: "#ffb238",
   pista: "#1d6a3b", // cobre bajo la máscara
   serigrafia: "#dce8d9",
