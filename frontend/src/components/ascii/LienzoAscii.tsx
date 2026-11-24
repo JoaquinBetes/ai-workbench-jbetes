@@ -4,17 +4,45 @@ import { TINTAS, type Escena, type Tinta } from "../../lib/ascii";
 const reducido = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // Fuente con la que se dibujan las escenas (la misma monoespaciada de la interfaz).
-const FUENTE = '"M PLUS 1 Code Variable", "M PLUS 1 Code", ui-monospace, monospace';
+const FUENTE = '"IBM Plex Mono", ui-monospace, monospace';
 
 function leerColores(el: HTMLElement): Record<Tinta, string> {
   const css = getComputedStyle(el);
   const v = (n: string, f: string) => css.getPropertyValue(n).trim() || f;
   return {
-    ink: v("--ink", "#ece8dc"),
-    muted: v("--muted", "#9a968a"),
-    accent: v("--accent", "#c2583f"),
-    doubt: v("--doubt", "#b98d3a"),
+    ink: v("--ink", "#8af7ad"),
+    muted: v("--muted", "#55ad77"),
+    accent: v("--accent", "#3dff7f"),
+    doubt: v("--doubt", "#ffb238"),
+    silk: v("--silk", "#dce8d9"),
+    pista: v("--pista", "#1d6a3b"),
   };
+}
+
+// Caracteres de caja: se dibujan con rectángulos que tocan los bordes de la
+// celda, así las pistas quedan continuas (ninguna fuente lo garantiza).
+// brazos: arriba, derecha, abajo, izquierda; 1 = simple, 2 = doble
+const CAJA: Record<string, [number, number, number, number]> = {
+  "─": [0, 1, 0, 1], "│": [1, 0, 1, 0], "┌": [0, 1, 1, 0], "┐": [0, 0, 1, 1], "└": [1, 1, 0, 0], "┘": [1, 0, 0, 1],
+  "├": [1, 1, 1, 0], "┤": [1, 0, 1, 1], "┬": [0, 1, 1, 1], "┴": [1, 1, 0, 1], "┼": [1, 1, 1, 1],
+  "═": [0, 2, 0, 2], "║": [2, 0, 2, 0], "╔": [0, 2, 2, 0], "╗": [0, 0, 2, 2], "╚": [2, 2, 0, 0], "╝": [2, 0, 0, 2],
+  "╢": [2, 0, 2, 1], "╟": [2, 1, 2, 0],
+};
+
+function dibujarCaja(c: CanvasRenderingContext2D, ch: string, x0: number, w: number, h: number, g: number) {
+  const brazos = CAJA[ch];
+  const cx = Math.round(x0 + w / 2 - g / 2), cy = Math.round(h / 2 - g / 2);
+  const sep = g * 2;
+  const tramo = (dir: number, tipo: number) => {
+    const offs = tipo === 2 ? [-sep / 2 - g / 2, sep / 2 - g / 2] : [0];
+    for (const o of offs) {
+      if (dir === 0) c.fillRect(cx + o, 0, g, cy + g);
+      if (dir === 2) c.fillRect(cx + o, cy, g, h - cy);
+      if (dir === 1) c.fillRect(cx, cy + o, x0 + w - cx, g);
+      if (dir === 3) c.fillRect(x0, cy + o, cx - x0 + g, g);
+    }
+  };
+  brazos.forEach((tipo, dir) => tipo && tramo(dir, tipo));
 }
 
 /**
@@ -65,6 +93,11 @@ export default function LienzoAscii({
     const atlas = new Map<Tinta, HTMLCanvasElement>();
     const indice = new Map<string, number>();
     let colores = leerColores(cv);
+    // brillo de fósforo: lo encendido (tinta accent) se copia a un lienzo chico y
+    // se suma encima agrandado; el reescalado hace de desenfoque, casi gratis.
+    const halo = document.createElement("canvas");
+    const hctx = halo.getContext("2d")!;
+    const REDUCCION = 4;
 
     const glifo = (c: string) => {
       let i = indice.get(c);
@@ -83,10 +116,14 @@ export default function LienzoAscii({
           a = nuevo;
         }
         const ac = a.getContext("2d")!;
+        ac.fillStyle = colores[t];
+        if (CAJA[c]) {
+          dibujarCaja(ac, c, i * cw * dpr, cw * dpr, ch * dpr, Math.max(1, Math.round(dpr)));
+          continue;
+        }
         ac.font = `${Math.round(ch * 0.86 * dpr)}px ${FUENTE}`;
         ac.textBaseline = "middle";
         ac.textAlign = "center";
-        ac.fillStyle = colores[t];
         ac.fillText(c, (i + 0.5) * cw * dpr, (ch * dpr) / 2);
       }
       return i;
@@ -101,6 +138,8 @@ export default function LienzoAscii({
       rows = Math.max(1, Math.floor(r.height / ch));
       cv.width = Math.round(r.width * dpr);
       cv.height = Math.round(r.height * dpr);
+      halo.width = Math.max(1, Math.ceil(cv.width / REDUCCION));
+      halo.height = Math.max(1, Math.ceil(cv.height / REDUCCION));
       atlas.clear();
       indice.clear();
       colores = leerColores(cv);
@@ -111,10 +150,13 @@ export default function LienzoAscii({
     const dibujar = (ahora: number) => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, cv.width, cv.height);
+      hctx.clearRect(0, 0, halo.width, halo.height);
+      let hayHalo = false;
       const ox = Math.floor((cv.width / dpr - cols * cw) / 2);
       const oy = Math.floor((cv.height / dpr - rows * ch) / 2);
       escenaRef.current({
         t: reducido() ? 2.5 : (ahora - t0) / 1000,
+        ahora,
         cols,
         rows,
         aspecto: cw / ch,
@@ -122,20 +164,43 @@ export default function LienzoAscii({
         poner: (x, y, c, alpha, tinta = "ink") => {
           if (x < 0 || y < 0 || x >= cols || y >= rows || alpha <= 0.01 || c === " ") return;
           const i = glifo(c);
-          ctx.globalAlpha = Math.min(1, alpha);
-          ctx.drawImage(
-            atlas.get(tinta)!,
-            i * cw * dpr, 0, cw * dpr, ch * dpr,
-            (ox + x * cw) * dpr, (oy + y * ch) * dpr, cw * dpr, ch * dpr,
-          );
+          const a = Math.min(1, alpha);
+          const dx = (ox + x * cw) * dpr, dy = (oy + y * ch) * dpr;
+          ctx.globalAlpha = a;
+          ctx.drawImage(atlas.get(tinta)!, i * cw * dpr, 0, cw * dpr, ch * dpr, dx, dy, cw * dpr, ch * dpr);
+          if (tinta === "accent" && a > 0.3) {
+            hayHalo = true;
+            hctx.globalAlpha = a;
+            hctx.fillStyle = colores.accent;
+            hctx.fillRect(dx / REDUCCION, dy / REDUCCION + (ch * dpr) / REDUCCION / 4, (cw * dpr) / REDUCCION, (ch * dpr) / REDUCCION / 2);
+          }
         },
       });
+      if (hayHalo) {
+        ctx.globalCompositeOperation = "lighter";
+        ctx.imageSmoothingEnabled = true;
+        ctx.globalAlpha = 0.55;
+        ctx.drawImage(halo, 0, 0, cv.width, cv.height);
+        ctx.globalAlpha = 0.3;
+        ctx.drawImage(halo, -cw * dpr, -ch * dpr * 0.5, cv.width + cw * dpr * 2, cv.height + ch * dpr);
+        ctx.globalCompositeOperation = "source-over";
+      }
       ctx.globalAlpha = 1;
     };
 
+    // El IntersectionObserver a veces no avisa cuando un ancestro termina una
+    // animación de clip-path; cada medio segundo se confirma a mano.
+    let revisado = 0;
+    const confirmarVisible = (ahora: number) => {
+      if (visible || ahora - revisado < 500) return;
+      revisado = ahora;
+      const r = cv.getBoundingClientRect();
+      visible = r.width > 0 && r.height > 0 && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth;
+    };
     const bucle = (ahora: number) => {
       if (!vivo) return;
       raf = requestAnimationFrame(bucle);
+      confirmarVisible(ahora);
       if (!visible || document.hidden || pausadoRef.current) return;
       if (ahora - ultimo < 1000 / fps) return;
       ultimo = ahora;
@@ -149,7 +214,7 @@ export default function LienzoAscii({
     };
 
     // Esperar a la fuente: si no, el atlas se arma con la de reemplazo.
-    document.fonts.load(`${ch}px ${FUENTE}`, "Mｱ").finally(() => vivo && arrancar());
+    document.fonts.load(`${ch}px ${FUENTE}`, "M@#").finally(() => vivo && arrancar());
 
     const ro = new ResizeObserver(() => {
       medir();
@@ -161,8 +226,8 @@ export default function LienzoAscii({
 
     const mover = (e: PointerEvent) => {
       const r = cv.getBoundingClientRect();
-      const x = e.clientX - r.left, y = e.clientY - r.top;
-      puntero = x >= 0 && y >= 0 && x <= r.width && y <= r.height ? { x: x / cw, y: y / ch } : null;
+      // también fuera del lienzo: el ojo mira hacia el puntero aunque esté lejos
+      puntero = { x: (e.clientX - r.left) / cw, y: (e.clientY - r.top) / ch };
     };
     const salir = () => (puntero = null);
     if (interactivo) {

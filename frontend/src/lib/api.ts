@@ -1,5 +1,6 @@
 // Cliente de la API del backend (FastAPI).
 import { telemetria } from "./telemetria";
+import { emitirPulso } from "./ascii";
 
 export type ModelInfo = {
   name: string;
@@ -104,7 +105,10 @@ async function* streamSSE(url: string, body: unknown, signal?: AbortSignal): Asy
         const linea = bloque.split("\n").find((l) => l.startsWith("data: "));
         if (!linea) continue;
         const ev = JSON.parse(linea.slice(6)) as ChatEvent;
-        if (ev.type === "token") telemetria.token(id, Math.max(1, ev.logprobs.length));
+        if (ev.type === "token") {
+          telemetria.token(id, Math.max(1, ev.logprobs.length));
+          emitirPulso();
+        }
         else if (ev.type === "done") stats = ev.stats;
         yield ev;
       }
