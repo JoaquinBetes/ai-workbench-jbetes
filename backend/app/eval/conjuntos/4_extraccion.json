@@ -1,0 +1,47 @@
+{
+  "slug": "extraccion",
+  "nombre": "Extracción de datos",
+  "descripcion": "Sacar un dato puntual de un texto corto.",
+  "casos": [
+    {
+      "pregunta": "¿Qué fecha aparece en este texto? «La reunión quedó fijada para el 12 de marzo de 2025 en la sede central.»",
+      "referencia": "12 de marzo de 2025"
+    },
+    {
+      "pregunta": "¿Quién firma este mensaje? «Hola, equipo: mañana no voy a poder ir. Saludos, Martina Ruiz.»",
+      "referencia": "Martina Ruiz"
+    },
+    {
+      "pregunta": "¿Cuál es el precio total? «Compraste 2 entradas a 4.500 pesos cada una; total: 9.000 pesos.»",
+      "referencia": "9.000 pesos"
+    },
+    {
+      "pregunta": "¿En qué ciudad es el evento? «Este año el festival se hace en Mendoza, del 3 al 5 de abril.»",
+      "referencia": "Mendoza"
+    },
+    {
+      "pregunta": "¿Qué correo electrónico aparece? «Por consultas, escribinos a soporte@ejemplo.com o llamanos.»",
+      "referencia": "soporte@ejemplo.com"
+    },
+    {
+      "pregunta": "¿Cuántas personas se inscribieron? «Al cierre de la convocatoria se habían inscripto 1.250 personas.»",
+      "referencia": "1.250"
+    },
+    {
+      "pregunta": "¿Cómo se llama la empresa? «Construcciones del Sur S.A. ganó la licitación del puente.»",
+      "referencia": "Construcciones del Sur S.A."
+    },
+    {
+      "pregunta": "¿Qué medicamento se menciona? «El médico le indicó ibuprofeno cada ocho horas durante tres días.»",
+      "referencia": "Ibuprofeno"
+    },
+    {
+      "pregunta": "¿Cuál es el horario de atención? «Atendemos de lunes a viernes, de 9 a 18 horas.»",
+      "referencia": "De lunes a viernes, de 9 a 18 horas"
+    },
+    {
+      "pregunta": "¿Qué número de pedido aparece? «Tu pedido #A-4471 ya salió del depósito.»",
+      "referencia": "A-4471"
+    }
+  ]
+}

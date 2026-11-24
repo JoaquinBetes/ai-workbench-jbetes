@@ -1,0 +1,47 @@
+{
+  "slug": "datos",
+  "nombre": "Datos concretos",
+  "descripcion": "Preguntas de cultura general con una respuesta corta y única.",
+  "casos": [
+    {
+      "pregunta": "¿Cuál es la capital de Australia?",
+      "referencia": "Canberra"
+    },
+    {
+      "pregunta": "¿En qué año llegó el ser humano a la Luna por primera vez?",
+      "referencia": "1969"
+    },
+    {
+      "pregunta": "¿Qué elemento químico tiene el símbolo Fe?",
+      "referencia": "Hierro"
+    },
+    {
+      "pregunta": "¿Quién escribió «Cien años de soledad»?",
+      "referencia": "Gabriel García Márquez"
+    },
+    {
+      "pregunta": "¿Cuál es el planeta más grande del sistema solar?",
+      "referencia": "Júpiter"
+    },
+    {
+      "pregunta": "¿Cuántos lados tiene un hexágono?",
+      "referencia": "6"
+    },
+    {
+      "pregunta": "¿Cuál es el río más largo de Sudamérica?",
+      "referencia": "Amazonas"
+    },
+    {
+      "pregunta": "¿En qué ciudad nació Jorge Luis Borges?",
+      "referencia": "Buenos Aires"
+    },
+    {
+      "pregunta": "¿Cuál es la fórmula química del agua?",
+      "referencia": "H2O"
+    },
+    {
+      "pregunta": "¿Qué gas absorben las plantas durante la fotosíntesis?",
+      "referencia": "Dióxido de carbono"
+    }
+  ]
+}
