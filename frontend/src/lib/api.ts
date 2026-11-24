@@ -13,6 +13,9 @@ export type ModelInfo = {
 export type Health = {
   status: string;
   ollama: { ok: boolean; host: string; version?: string; error?: string };
+  /** la base de la evaluación (Postgres); puede faltar en un backend viejo */
+  db?: { ok: boolean; error?: string };
+  modelo_embeddings?: string;
 };
 
 export type TokenLogprob = {
