@@ -68,7 +68,7 @@ export default function ExploradorSampling({
           <h2 className="display text-[32px] leading-[1.1] text-ink">
             <Decodificar texto="Cada token es un sorteo" duracion={600} />
           </h2>
-          <p className="mt-3 max-w-[62ch] text-small leading-relaxed text-ink-2">
+          <p className="prosa mt-3 max-w-[62ch] text-[15px] leading-relaxed text-ink-2">
             El modelo no elige la palabra más probable: arma una ruleta con su vocabulario y tira. Temperatura, top-k y
             top-p cambian esa ruleta antes del sorteo. Mové los controles de la izquierda y mirá esta, con probabilidades
             de ejemplo.

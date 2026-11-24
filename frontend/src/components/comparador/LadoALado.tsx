@@ -297,7 +297,7 @@ export default function LadoALado({ activa = true }: { activa?: boolean }) {
                       {c.thinking && (
                         <details className="well px-3 py-2">
                           <summary className="label cursor-pointer select-none">Razonamiento</summary>
-                          <p className="mt-1 whitespace-pre-wrap text-label text-muted">{c.thinking}</p>
+                          <p className="prosa mt-1 whitespace-pre-wrap text-small leading-relaxed text-muted">{c.thinking}</p>
                         </details>
                       )}
                       {c.tokens.length > 0 ? (

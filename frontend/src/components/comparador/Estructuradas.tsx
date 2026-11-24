@@ -413,13 +413,13 @@ export default function Estructuradas({ activa = true }: { activa?: boolean }) {
                     ).map(([t, v]) => (
                       <div key={t}>
                         <div className="label">{t}</div>
-                        <div className="num mt-0.5 text-[18px] leading-none text-ink">{v === null ? "—" : porcentaje(v, 0)}</div>
+                        <div className="lectura mt-0.5 text-[24px] leading-none text-ink">{v === null ? "—" : porcentaje(v, 0)}</div>
                         <Barrita v={v} color={r.color} />
                       </div>
                     ))}
                     <div>
                       <div className="label">Latencia</div>
-                      <div className="num mt-0.5 text-[18px] leading-none text-ink">{segundos(r.latencia)}</div>
+                      <div className="lectura mt-0.5 text-[24px] leading-none text-ink">{segundos(r.latencia)}</div>
                     </div>
                   </div>
                 </div>

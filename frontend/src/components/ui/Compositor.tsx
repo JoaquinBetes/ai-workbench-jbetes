@@ -3,7 +3,7 @@ import { useId, useLayoutEffect, useRef, type ReactNode, type RefObject } from "
 import { Giro } from "../ascii/Texto";
 
 /**
- * Campo para escribirle al modelo. Panel con vías en las esquinas; mientras el
+ * Campo para escribirle al modelo. Un panel con su etiqueta visible; mientras el
  * modelo escribe, una línea de exploración recorre el borde de arriba (estado,
  * no decoración: se detiene cuando termina).
  */
@@ -54,7 +54,7 @@ export default function Compositor({
         if (puedeEnviar) onEnviar();
       }}
     >
-      <div className="panel focus-within:border-[var(--line-2)]">
+      <div className="panel compositor">
         {generando && (
           <span className="absolute inset-x-0 -top-px z-[2] h-px overflow-hidden" aria-hidden>
             <span className="block h-full w-1/3 animate-[escaner_1.4s_linear_infinite] bg-[linear-gradient(90deg,transparent,var(--accent),transparent)]" />
@@ -79,7 +79,7 @@ export default function Compositor({
               onDetener();
             }
           }}
-          className="campo-compositor block min-h-[52px] w-full resize-none bg-transparent px-4 pt-1.5 text-body leading-relaxed text-ink placeholder:text-muted"
+          className="campo-compositor prosa block min-h-[52px] w-full resize-none bg-transparent px-4 pt-1.5 text-[16px] leading-relaxed text-ink placeholder:text-muted"
         />
         <div className="flex items-center gap-3 px-3 pb-3">
           {chip && (
@@ -109,7 +109,7 @@ export default function Compositor({
           )}
         </div>
       </div>
-      <div className="sin-barra mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 max-lg:flex-nowrap max-lg:overflow-x-auto" aria-label={ejemplos.length ? "Ejemplos de prompt" : "Atajos del campo"}>
+      <div className={`sin-barra mt-2.5 flex min-h-[28px] flex-wrap items-center gap-2 max-lg:flex-nowrap max-lg:overflow-x-auto ${valor.trim() ? "max-sm:hidden" : ""}`} aria-label={ejemplos.length ? "Ejemplos de prompt" : "Atajos del campo"}>
         {ejemplos.length > 0 ? (
           ejemplos.map((ej) => (
             <button key={ej} type="button" className="chip" onClick={() => onCambio(ej)}>
@@ -117,7 +117,7 @@ export default function Compositor({
             </button>
           ))
         ) : (
-          <span className="flex flex-wrap items-center gap-4 text-label text-muted">
+          <span className="solo-teclado flex flex-wrap items-center gap-4 text-label text-muted">
             <span className="flex items-center gap-1.5">
               <kbd className="kbd">↵</kbd> enviar
             </span>
